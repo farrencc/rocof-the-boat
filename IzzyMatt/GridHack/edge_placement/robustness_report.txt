@@ -1,0 +1,52 @@
+ROBUSTNESS OF THE RANKING
+========================================================================================
+
+  reprocessed from 426 solved frequencies; no re-solving
+
+  reference: default: band 0.01-2.16 Hz, lag 100 ms, window 500 ms
+
+  FREQUENCY DEVIATION
+
+      variant                                          rho  top10    winner    best  peak Hz
+
+      default: band 0.01-2.16 Hz, lag 100 ms, window 500 ms   1.000    10/10     31-96  0.7509    2.033
+      band 0.01-1 Hz                                 0.775     1/10     11-96* 0.5794    0.986
+      band 0.01-5 Hz                                 0.337     0/10      3-73* 0.8469    3.034
+      band 0.01-20 Hz                                0.337     0/10      3-73* 0.8469    3.034
+      measurement lag 50 ms                          0.989     8/10     11-98* 0.7713    1.902
+      measurement lag 200 ms                         0.991     9/10     31-96  0.7307    2.033
+      RoCoF window 250 ms                            1.000    10/10     31-96  0.7509    2.033
+      RoCoF window 1000 ms                           1.000    10/10     31-96  0.7509    2.033
+      every second frequency point                   0.993     1/10     21-97* 0.6846    1.957
+
+      * winner differs from the reference
+
+  WINDOWED ROCOF
+
+      variant                                          rho  top10    winner    best  peak Hz
+
+      default: band 0.01-2.16 Hz, lag 100 ms, window 500 ms   1.000    10/10     11-96  0.2062    1.312
+      band 0.01-1 Hz                                 0.448     7/10     11-96  0.5794    0.986
+      band 0.01-5 Hz                                -0.063     0/10     74-78* 0.9880    2.556
+      band 0.01-20 Hz                               -0.063     0/10     74-78* 0.9880    2.556
+      measurement lag 50 ms                          1.000     9/10     11-96  0.1887    1.363
+      measurement lag 200 ms                         1.000     9/10     11-96  0.2298    1.239
+      RoCoF window 250 ms                            0.671     1/10     31-96* 0.7573    2.033
+      RoCoF window 1000 ms                           1.000     9/10     11-96  0.1495    1.587
+      every second frequency point                   1.000     9/10     11-96  0.2062    1.312
+
+      * winner differs from the reference
+
+  where the baseline's own peak sits, band by band
+
+      default: band 0.01-2.16 Hz, lag 100 ms, window 500 ms C_freq peak   1.831 Hz,  C_rocof peak   1.814 Hz
+      band 0.01-1 Hz                               C_freq peak   0.986 Hz,  C_rocof peak   0.986 Hz
+      band 0.01-5 Hz                               C_freq peak   2.556 Hz,  C_rocof peak   2.556 Hz
+      band 0.01-20 Hz                              C_freq peak   2.556 Hz,  C_rocof peak   2.556 Hz
+      measurement lag 50 ms                        C_freq peak   1.831 Hz,  C_rocof peak   1.814 Hz
+      measurement lag 200 ms                       C_freq peak   1.831 Hz,  C_rocof peak   1.814 Hz
+      RoCoF window 250 ms                          C_freq peak   1.831 Hz,  C_rocof peak   1.831 Hz
+      RoCoF window 1000 ms                         C_freq peak   1.831 Hz,  C_rocof peak   1.814 Hz
+      every second frequency point                 C_freq peak   1.831 Hz,  C_rocof peak   1.814 Hz
+
+  highest physical mode 1.827 Hz;  lowest regularisation mode 2.543 Hz

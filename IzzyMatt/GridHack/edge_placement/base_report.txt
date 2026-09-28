@@ -1,0 +1,20 @@
+BASE CASE FOR SINGLE-EDGE PLACEMENT
+======================================================================
+
+  grid                  100 buses, 166 lines
+  configuration         #128    SNSP 70.0%
+  machines synchronised 2
+  stored energy            33.79 p.u.s
+  total damping            0.138 p.u./(rad/s)
+  droop, total           114.000 p.u.
+  steady offset           0.3181 Hz per p.u.   (topology-independent)
+  max angle gap           0.3245 rad
+  min cos(angle gap)      0.9478
+
+  stable                yes   worst non-zero root Re = -0.1993
+  modes                 200, from 0.0855 to 35.573 Hz
+  band swept            0.01000 to 20.000 Hz  (160 log-spaced points)
+
+  candidate pairs       4950   (4784 new, 166 reinforcements)
+  kappa                 2.5 p.u.   (spur 2.5, main 4.0, backbone 8.0)
+  digest                fcc01f4624f3d1db

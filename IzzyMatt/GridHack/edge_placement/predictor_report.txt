@@ -1,0 +1,33 @@
+THE GREEN'S FUNCTION AS A PREDICTOR OF RISK
+==========================================================================
+
+  no edges anywhere -- the frozen grid, 240 operating states
+
+  events          sourced
+  band            per-configuration   (0.024 to 3.210 Hz across the ensemble)
+  frequencies     140 per configuration
+  elapsed         624 s
+
+  Spearman rho, and R^2 of a log-log straight line:
+
+      predictor                       rocof_top5                  dev_top5
+
+                               rho            R2         rho            R2
+
+      C_H2                  -0.355         0.304      -0.379         0.263
+      C_freq                -0.336         0.310      -0.331         0.266
+      C_rocof               -0.304         0.290      -0.288         0.241
+      snsp                   0.912         0.740       0.948         0.788
+      stored_energy         -0.891         0.850      -0.940         0.929
+
+  spread of each quantity over the ensemble (max/min):
+
+      C_H2              3367.85x
+      C_freq             834.72x
+      C_rocof          17762.09x
+      snsp                 3.33x
+      stored_energy        4.86x
+      rocof_top5           3.31x
+      dev_top5             3.56x
+
+  best Green's-function predictor of rocof_top5: C_H2  (rho -0.355, vs -0.891 for system inertia)

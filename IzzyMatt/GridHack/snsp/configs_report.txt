@@ -1,0 +1,27 @@
+ENSEMBLE OF OPERATING CONFIGURATIONS
+======================================================================
+
+  240 configurations, 15 SNSP levels x 16 draws
+
+    SNSP    n  machines on  stored (pu s)   reserve  dist to machine
+----------------------------------------------------------------------
+     30%   16         3.94           51.1      78.8             2.55
+     35%   16         3.31           46.1      66.2             2.86
+     40%   16         3.56           46.4      71.2             2.69
+     45%   16         3.12           43.2      62.5             3.05
+     50%   16         2.94           39.0      58.8             3.00
+     55%   16         2.69           37.5      53.8             3.21
+     60%   16         2.19           34.5      43.8             3.59
+     65%   16         2.06           31.7      41.2             3.78
+     70%   16         2.12           31.5      42.5             3.61
+     75%   16         1.56           27.1      31.2             4.17
+     80%   16         1.50           26.3      30.0             4.50
+     85%   16         1.25           24.0      25.0             4.88
+     90%   16         1.00           20.5      20.0             5.55
+     95%   16         1.00           20.4      20.0             5.63
+    100%   16         0.00           11.3       0.0              nan
+
+  realised SNSP spans 30.0% to 100.0%
+  stored energy falls from 55 to 11 p.u. s
+  configurations with a machine below minimum generation: 1
+  wind patterns: inland 89, coastal 77, neutral 74

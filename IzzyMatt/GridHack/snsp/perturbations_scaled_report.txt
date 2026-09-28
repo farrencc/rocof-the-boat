@@ -1,0 +1,27 @@
+HAZARD-SCALED DISTURBANCE SET
+======================================================================
+
+  8 events, the same rule applied to every configuration
+
+  Sizes below are for the reference dispatch (SNSP 70%); the same events
+  are larger at higher SNSP and smaller at lower, which is the point.
+
+  event                        kind            net (p.u.)  buses
+----------------------------------------------------------------------
+  front@north                  wind_front          -0.581  12
+  front@mid                    wind_front          -0.700  12
+  front@south                  wind_front          -0.645  12
+  front@seaboard               wind_front          -1.205  8
+  forecast@allwind             forecast_error      -1.170  12
+  spike@seaboard               wind_spike           1.205  8
+  trip@hvdc                    unit_trip           -0.600  1
+  trip@largest_farm            unit_trip           -0.798  1
+
+  net imbalance: min 0.58, max 1.21 p.u. against 12 p.u. of demand
+  (4.8% to 10.0% of system demand)
+
+  the same set at the two ends of the SNSP sweep:
+
+    SNSP    30%   total imbalance across the set   3.02 p.u.
+    SNSP    65%   total imbalance across the set   6.42 p.u.
+    SNSP   100%   total imbalance across the set   9.81 p.u.

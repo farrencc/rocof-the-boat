@@ -1,0 +1,11 @@
+{
+  "edge":[
+    4,
+    73
+  ],
+  "kappa":2.5,
+  "events":"sourced",
+  "n_configs":240,
+  "seconds":312.6285619,
+  "reproduction_error":2.220446049e-16
+}

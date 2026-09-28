@@ -1,0 +1,166 @@
+A PREDICTOR OF RISK, BUILT ON THE GRID'S OWN CLUSTERS
+============================================================================================
+
+  risk = rocof_top5: the 500 ms RoCoF summed over the 5 worst buses,
+         averaged over the 20 hazard scenarios (1.16 to 3.84)
+  240 configurations: 180 train, 60 held out (stratified by SNSP level, seed 20260910)
+  fitted on log10(risk); model choice by 20x5-fold CV inside the training set only
+
+1. How much room is there for a spatial predictor at all?
+--------------------------------------------------------------------------------------------
+  Before clustering anything, ask what the target is made of.  The
+  same 500 ms window evaluated on the centre-of-inertia frequency
+  -- the whole grid as one machine -- already accounts for
+      R2 = 0.953   of log10(risk).
+
+  var(log risk)            0.01821
+  var(system-wide part)    0.02811
+  var(local amplification) 0.00214   (11.8% of the target's variance)
+  the score runs 7.94x (sd 0.83) the system-wide reading
+
+  So this score is mostly a system-wide quantity wearing a local
+  costume.  That is the ceiling every spatial feature below is
+  working under, and it is worth knowing before reading the rest.
+
+2. What the partition is
+--------------------------------------------------------------------------------------------
+  k = 4 regions from the eigengap heuristic on the Kij-weighted normalised Laplacian
+  sizes [25, 24, 21, 30], conductance [0.097, 0.116, 0.135, 0.11]
+
+3. Every model family, scored the same way
+--------------------------------------------------------------------------------------------
+  family              p  alpha   CV R2  |  test R2  test RMS  98% band  worst  n>10%
+  ----------------------------------------------------------------------------------------
+  snsp                1   0.10   0.811  |    0.794     15.1%     1.78x   1.49x     28
+  snsp_quad           2   0.10   0.843  |    0.833     13.5%     1.75x   1.47x     23
+  swing_ratio         1   0.10   0.942  |    0.944      7.6%     1.31x   1.16x     15
+  swing               2   0.10   0.968  |    0.971      5.4%     1.22x   1.12x      2
+  swing_plus          4   0.10   0.975  |    0.978      4.7%     1.18x   1.10x      2  <-
+  global_physics      3   0.10   0.858  |    0.852     12.7%     1.67x   1.38x     24
+  global_all         12   0.00   0.906  |    0.928      8.7%     1.39x   1.22x     19
+  cluster_snsp        4   1.00   0.806  |    0.808     14.5%     1.82x   1.48x     28
+  stress_max          1   1.00   0.539  |    0.543     23.3%     2.06x   1.51x     46
+  cluster_stress      5   1.00   0.913  |    0.903     10.1%     1.51x   1.30x     20
+  cluster_all        20   0.03   0.954  |    0.957      6.6%     1.33x   1.18x     11
+  hybrid             11   0.00   0.936  |    0.935      8.2%     1.38x   1.21x     13
+  modal              31   0.03   0.957  |    0.971      5.4%     1.25x   1.13x      5
+
+  CV R2 is in-training (the number families were chosen on);
+  everything right of the bar is the 60 held-out configurations,
+  read once.  '98% band' is the multiplicative width of the
+  central 98% of residuals -- the spread of the trend -- and
+  'n>10%' counts held-out points missed by more than 10%.
+
+4. The comparison that was asked for
+--------------------------------------------------------------------------------------------
+  baseline   SNSP alone          test R2  0.794   98% band  1.78x   worst  1.49x   28 of 60 missed by >10%
+  chosen     swing_plus          test R2  0.978   98% band  1.18x   worst  1.10x   2 of 60 missed by >10%
+
+  the spread of the trend narrows 1.50x, the worst single miss falls from 1.49x to 1.10x,
+  and the count of >10% misses falls from 28 to 2 out of 60.  That is the goal, met.
+
+5. But is it the *clustering*?  The controls say no.
+--------------------------------------------------------------------------------------------
+  (a) the `cluster_all` construction -- share, inertia, reserve, distance
+      and stress per region -- on partitions that are not the
+      spectral one:
+
+      partition                     CV R2   test R2  98% band  n>10%
+      spectral (eigengap k=4)       0.953    0.957     1.33x     11
+      geographic quarters           0.954    0.956     1.34x      7
+      random, same sizes            0.945    0.953     1.32x    8.6   (mean of 20, range 0.920-0.975)
+
+      the spectral partition beats 12 of 20 random partitions of identical size
+      and the naive geographic quartering by +0.001 in held-out R2.
+
+  (b) the modal family on 10 slow modes, 10 fast modes, and random rotations:
+
+      basis                              test R2  98% band  n>10%
+      slowest 10 modes (Fiedler and after)   0.971     1.25x      5
+      fastest 10 modes                    0.970     1.25x      7
+      random orthonormal                  0.963     1.28x    6.3   (mean of 15, range 0.933-0.972)
+
+      the slowest modes and the fastest modes score 0.971 and 0.970.
+      The fast modes are single-bus wiggles with no regional
+      meaning whatever.  If they predict as well as the Fiedler
+      vector does, the spectrum is not what is being used --
+      the dimension is.  Any rich enough description of *where*
+      the generation and the inertia sit does the same work.
+
+6. How much rests on k = 4
+--------------------------------------------------------------------------------------------
+  training-CV and held-out R2 for the cluster families, against k:
+   k    cluster_stress            hybrid
+        CV R2  test R2      CV R2  test R2
+   2    0.872    0.863      0.898    0.892
+   3    0.892    0.878      0.916    0.925
+   4    0.912    0.903      0.935    0.935
+   5    0.900    0.900      0.922    0.921
+   6    0.915    0.943      0.941    0.950
+   7    0.904    0.927      0.920    0.938
+   8    0.895    0.908      0.916    0.927
+   9    0.937    0.943      0.962    0.965
+  10    0.902    0.919      0.921    0.942
+  11    0.904    0.919      0.922    0.941
+  12    0.896    0.916      0.917    0.936
+
+  the eigengap preferred k = 4 by a hair (1.01x over the runner-up gap),
+  which is consistent with the flatness of this table.
+
+7. What the `cluster_all` model leans on
+--------------------------------------------------------------------------------------------
+  held-out R2 lost when a whole group of columns is dropped and
+  the model refitted -- reported instead of coefficients, because
+  a region with one synchronous station switches its reserve and
+  its inertia on together, and ridge then splits one effect
+  between two collinear columns.
+
+  Read on the interpretable family rather than on the winner: the
+  modal family's columns are three mutually redundant views of one
+  projection, so dropping any group of them costs nothing and the
+  table would say only that.
+
+  group                        cols   test R2   lost
+  dist                            4     0.903   +0.054
+  log stress                      4     0.949   +0.008
+  log inertia                     4     0.952   +0.005
+  reserve                         4     0.954   +0.003
+  snsp                            4     0.956   +0.001
+  (nothing dropped)              20     0.957   +0.000
+
+  2 column(s) never vary and carry nothing: snsp[1], log stress[1].
+  (that region has no wind and no HVDC, so its share and its
+   stress are structurally zero in every configuration.)
+
+8. What to take away
+--------------------------------------------------------------------------------------------
+  * A far better predictor than SNSP exists and is out-of-sample
+    real: R2 0.794 -> 0.978, outliers 28 -> 2 of 60.
+  * It needs two columns, not thirty-one.  `swing` -- log of the
+    megawatts the contingency set can remove, and log of the
+    stored energy there is to absorb them -- scores 0.971 with
+    2 outliers, matching every elaborate feature set here.
+    Those are the two quantities the swing equation names: the
+    aggregate size of the contingency set (not any standing
+    imbalance -- the states are balanced) over the stored energy.
+    Forcing the exponents to the purely inertial (+1, -1) already
+    gives 0.944; freeing them gives 0.971, at (+1.29, -0.65),
+    because a 500 ms window is read after damping and governors
+    have begun to act, not at t = 0.
+  * So what was wrong with SNSP was never that it ignores
+    geography.  It is a *ratio*: it tracks the denominator only
+    loosely (r = -0.92 against log inertia) and is nearly blind
+    to the numerator (r = +0.34 against log hazard).  At a fixed
+    SNSP level the inertia still ranges about 28% and the hazard
+    about 23%, and that spread is the scatter in figure 1c.
+  * The spectral clustering buys nothing over that.  Random
+    partitions of the same sizes, a naive geographic quartering,
+    and the fastest Laplacian modes all score within noise of the
+    spectral cut -- and all of them are just rich bases for the
+    same two aggregates.
+  * The reason there is nothing local to find is section 1: this
+    target is 95% a system-wide quantity.  Narrowing it to the
+    single worst bus (rocof_top1) raises the local share from
+    11.8% to 19.1% and lifts the spectral cut from beating 12 of
+    20 random partitions to 15 of 20 -- the right direction, and
+    still not a result.

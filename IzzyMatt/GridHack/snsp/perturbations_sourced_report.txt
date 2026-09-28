@@ -1,0 +1,39 @@
+HAZARD-SCALED DISTURBANCE SET
+======================================================================
+
+  20 events, the same rule applied to every configuration
+
+  Sizes below are for the reference dispatch (SNSP 70%); the same events
+  are larger at higher SNSP and smaller at lower, which is the point.
+
+  event                        kind            net (p.u.)  buses
+----------------------------------------------------------------------
+  load_step@Belfast            load_step           -0.400  1
+  load_step@Dublin             load_step           -0.400  1
+  load_step@Limerick           load_step           -0.400  1
+  load_step@Cork               load_step           -0.400  1
+  load_step@Waterford          load_step           -0.400  1
+  load_reject@Dublin           load_reject          0.500  1
+  diffuse_load@all             diffuse_load        -0.500  100
+  wind_drop@WF-Mayo            wind_drop           -0.284  1
+  wind_drop@WF-Connemara       wind_drop           -0.284  1
+  wind_drop@WF-Clare           wind_drop           -0.284  1
+  wind_drop@WF-Bantry          wind_drop           -0.284  1
+  wind_drop@WF-Donegal         wind_drop           -0.319  1
+  wind_drop@WF-Mizen           wind_drop           -0.319  1
+  wind_drop@WF-Sligo           wind_drop           -0.177  1
+  wind_drop@WF-Blackwater      wind_drop           -0.177  1
+  wind_lull@seaboard           wind_lull           -0.603  8
+  infeed_loss@SY-East          infeed_loss         -0.971  1
+  infeed_loss@SY-Shannon       infeed_loss         -0.857  1
+  infeed_loss@SY-North         infeed_loss         -0.543  1
+  infeed_loss@HVDC-East        infeed_loss         -0.600  1
+
+  net imbalance: min 0.18, max 0.97 p.u. against 12 p.u. of demand
+  (1.5% to 8.1% of system demand)
+
+  the same set at the two ends of the SNSP sweep:
+
+    SNSP    30%   total imbalance across the set   7.65 p.u.
+    SNSP    65%   total imbalance across the set   8.75 p.u.
+    SNSP   100%   total imbalance across the set   7.59 p.u.

@@ -1,0 +1,311 @@
+{
+  "description": "sourced disturbance set for the SNSP ensemble",
+  "n_events": 20,
+  "sizes_pu": {
+    "load_step": 0.4,
+    "wind_drop": 0.35,
+    "infeed_loss": 0.6,
+    "lull_each": 0.08,
+    "load_reject": 0.5,
+    "diffuse_total": 0.5,
+    "front_depth": 0.35,
+    "front_reach": 2.5,
+    "seaboard_depth": 0.2,
+    "allwind_depth": 0.15,
+    "spike_depth": 0.2,
+    "drop_fraction": 0.4,
+    "lull_fraction": 0.1,
+    "largest_unit": 1.0
+  },
+  "events": [
+    {
+      "name": "load_step@Belfast",
+      "kind": "load_step",
+      "scaled": false,
+      "net_pu": -0.4,
+      "buses": [
+        9
+      ]
+    },
+    {
+      "name": "load_step@Dublin",
+      "kind": "load_step",
+      "scaled": false,
+      "net_pu": -0.4,
+      "buses": [
+        39
+      ]
+    },
+    {
+      "name": "load_step@Limerick",
+      "kind": "load_step",
+      "scaled": false,
+      "net_pu": -0.4,
+      "buses": [
+        92
+      ]
+    },
+    {
+      "name": "load_step@Cork",
+      "kind": "load_step",
+      "scaled": false,
+      "net_pu": -0.4,
+      "buses": [
+        95
+      ]
+    },
+    {
+      "name": "load_step@Waterford",
+      "kind": "load_step",
+      "scaled": false,
+      "net_pu": -0.4,
+      "buses": [
+        98
+      ]
+    },
+    {
+      "name": "load_reject@Dublin",
+      "kind": "load_reject",
+      "scaled": false,
+      "net_pu": 0.5,
+      "buses": [
+        39
+      ]
+    },
+    {
+      "name": "diffuse_load@all",
+      "kind": "diffuse_load",
+      "scaled": false,
+      "net_pu": -0.5,
+      "buses": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43,
+        44,
+        45,
+        46,
+        47,
+        48,
+        49,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        56,
+        57,
+        58,
+        59,
+        60,
+        61,
+        62,
+        63,
+        64,
+        65,
+        66,
+        67,
+        68,
+        69,
+        70,
+        71,
+        72,
+        73,
+        74,
+        75,
+        76,
+        77,
+        78,
+        79,
+        80,
+        81,
+        82,
+        83,
+        84,
+        85,
+        86,
+        87,
+        88,
+        89,
+        90,
+        91,
+        92,
+        93,
+        94,
+        95,
+        96,
+        97,
+        98,
+        99
+      ]
+    },
+    {
+      "name": "wind_drop@WF-Mayo",
+      "kind": "wind_drop",
+      "scaled": true,
+      "net_pu": 0.0,
+      "buses": [
+        20
+      ]
+    },
+    {
+      "name": "wind_drop@WF-Connemara",
+      "kind": "wind_drop",
+      "scaled": true,
+      "net_pu": 0.0,
+      "buses": [
+        30
+      ]
+    },
+    {
+      "name": "wind_drop@WF-Clare",
+      "kind": "wind_drop",
+      "scaled": true,
+      "net_pu": 0.0,
+      "buses": [
+        40
+      ]
+    },
+    {
+      "name": "wind_drop@WF-Bantry",
+      "kind": "wind_drop",
+      "scaled": true,
+      "net_pu": 0.0,
+      "buses": [
+        70
+      ]
+    },
+    {
+      "name": "wind_drop@WF-Donegal",
+      "kind": "wind_drop",
+      "scaled": true,
+      "net_pu": 0.0,
+      "buses": [
+        10
+      ]
+    },
+    {
+      "name": "wind_drop@WF-Mizen",
+      "kind": "wind_drop",
+      "scaled": true,
+      "net_pu": 0.0,
+      "buses": [
+        80
+      ]
+    },
+    {
+      "name": "wind_drop@WF-Sligo",
+      "kind": "wind_drop",
+      "scaled": true,
+      "net_pu": 0.0,
+      "buses": [
+        22
+      ]
+    },
+    {
+      "name": "wind_drop@WF-Blackwater",
+      "kind": "wind_drop",
+      "scaled": true,
+      "net_pu": 0.0,
+      "buses": [
+        83
+      ]
+    },
+    {
+      "name": "wind_lull@seaboard",
+      "kind": "wind_lull",
+      "scaled": true,
+      "net_pu": 0.0,
+      "buses": [
+        10,
+        20,
+        30,
+        40,
+        50,
+        60,
+        70,
+        80
+      ]
+    },
+    {
+      "name": "infeed_loss@SY-East",
+      "kind": "infeed_loss",
+      "scaled": true,
+      "net_pu": 0.0,
+      "buses": [
+        58
+      ]
+    },
+    {
+      "name": "infeed_loss@SY-Shannon",
+      "kind": "infeed_loss",
+      "scaled": true,
+      "net_pu": 0.0,
+      "buses": [
+        73
+      ]
+    },
+    {
+      "name": "infeed_loss@SY-North",
+      "kind": "infeed_loss",
+      "scaled": true,
+      "net_pu": 0.0,
+      "buses": [
+        16
+      ]
+    },
+    {
+      "name": "infeed_loss@HVDC-East",
+      "kind": "infeed_loss",
+      "scaled": true,
+      "net_pu": 0.0,
+      "buses": [
+        49
+      ]
+    }
+  ],
+  "sha256": {
+    "perturbations_sourced.csv": "8ef0ad12ab67047f384044c1a35ea18817c7db7323b554f357dfad69097080ce"
+  }
+}

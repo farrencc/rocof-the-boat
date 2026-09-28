@@ -1,0 +1,104 @@
+SNSP AGAINST THE COST OF THE FREQUENCY RESPONSE
+==========================================================================
+
+  240 configurations x 8 disturbances, J = sum_bus sum_event int [tau^2 (df/dt)^2 + f^2] dt
+
+1. Is there a correlation?
+--------------------------------------------------------------------------
+  Pearson  r = +0.704  (p = 3.30e-37)
+  Spearman rho = +0.977  (p = 5.76e-162)
+  linear fit    J = 29336.89 * SNSP + -13328.52   R^2 = 0.495
+  quadratic fit                              R^2 = 0.734   (curvature +106006.3)
+  J at SNSP 30% vs 100%: 331.0 -> 36451.4 (110.12x)
+  excluding the SNSP = 100% stratum: r = +0.857, rho = +0.972
+  log fit  log J = 5.94 * SNSP + 3.91   R^2 = 0.943
+  i.e. J multiplies by 1.81 per 10 points of SNSP, doubling every 12 points
+
+2. What do the two terms do separately?
+--------------------------------------------------------------------------
+  quantity                     30% SNSP  100% SNSP   ratio  r vs SNSP
+  J total                       331.022  36451.396  110.12     +0.704
+    gradient term (RoCoF)       217.546   4048.741   18.61     +0.900
+    field term (deviation)      113.475  32402.654  285.55     +0.662
+  J system-wide (COI)           136.168  34726.916  255.03     +0.671
+  J local (J - COI)             194.854   1724.480    8.85     +0.891
+  J excluding hit bus           302.750  34957.539  115.47     +0.702
+  worst 500 ms RoCoF Hz/s         0.631      3.332    5.28     +0.904
+  worst |f| Hz                    0.338      2.945    8.72     +0.898
+  share over 0.5 Hz/s             0.008      0.977  117.94     +0.962
+  share over 1 Hz/s (code)        0.000      0.875     inf     +0.867
+  share past UFLS (-0.8 Hz)       0.000      0.781     inf     +0.912
+  no post-event equilibrium       0.000      0.000       -       +nan
+  worst line, post-event          0.266      0.659    2.48     +0.925
+  total imbalance applied p.u.      3.093     10.134    3.28     +0.977
+  stored energy p.u. s           51.091     11.270    0.22     -0.950
+  primary reserve               201.625      0.000    0.00     -0.950
+
+3. How much does SNSP not explain?
+--------------------------------------------------------------------------
+  residual sd about the quadratic fit: 4647.70 (81.0% of mean J)
+  spread within an SNSP level (mean of max/min): 2.26x
+  the widest level: 3.36x at SNSP 85%
+
+    SNSP    mean J      sd       min       max
+     30%    331.02   71.05    209.45    454.24
+     35%    450.39   92.23    305.65    602.57
+     40%    587.32  161.08    383.33    836.21
+     45%    774.95  204.92    491.73   1078.10
+     50%    966.07  271.43    651.31   1596.19
+     55%   1369.44  285.92    933.48   1794.63
+     60%   1773.98  462.26   1144.69   2686.99
+     65%   2389.01  638.56   1438.60   3421.68
+     70%   2827.55  648.87   1670.75   4020.67
+     75%   4304.24 1101.95   2524.53   6245.89
+     80%   5508.35 1653.38   3131.73   8140.75
+     85%   6955.67 2379.70   3445.47  11572.49
+     90%  10264.95 2656.15   6563.90  14281.93
+     95%  11152.54 2536.07   7315.13  15036.61
+    100%  36451.40 3430.20  31867.02  40511.68
+
+4. Which variable is the cost actually following?
+--------------------------------------------------------------------------
+  predictor                             r  R^2 alone  R^2 with SNSP
+  SNSP                             +0.704      0.734          0.734
+  system inertia (sum H S)         -0.751      0.877          0.878
+  primary reserve (sum droop)      -0.751      0.877          0.878
+  machines synchronised            -0.743      0.864          0.866
+  mean hops to a machine           +0.905      0.862          0.938
+  share of wind on the coast       +0.244      0.102          0.737
+  output on radial farms           +0.694      0.589          0.741
+
+  (SNSP alone, quadratic: R^2 = 0.734)
+
+5. Do other cost functions agree?
+--------------------------------------------------------------------------
+  J and its two terms are integrals over the whole grid and the whole window.
+  The top-n scores are the other shape a limit can take: the 500 ms RoCoF, or the
+  downward nadir, at the n worst buses, added up and averaged over events.
+
+  score                              30%      100%   ratio  rho vs SNSP  rho vs J
+  J  (both terms)                331.022 36451.396  110.12       +0.977    +1.000
+  J gradient term only           217.546  4048.741   18.61       +0.960    +0.990
+  J field term only              113.475 32402.654  285.55       +0.981    +0.997
+  500 ms RoCoF, worst bus          0.344     2.388    6.94       +0.965    +0.987
+  500 ms RoCoF, worst 5            1.511    11.458    7.58       +0.969    +0.990
+  500 ms RoCoF, worst 10           2.783    22.522    8.09       +0.970    +0.991
+    the same, system-wide          0.164     2.016   12.29       +0.982    +0.997
+  nadir, worst bus                 0.187     1.627    8.68       +0.981    +0.996
+  nadir, worst 5                   0.891     8.132    9.13       +0.984    +0.998
+  nadir, worst 10                  1.750    16.262    9.30       +0.984    +0.997
+    the same, system-wide          0.159     1.625   10.21       +0.984    +0.997
+  worst bus / system, RoCoF        2.091     1.185    0.57       -0.684    -0.667
+  worst bus / system, nadir        1.177     1.001    0.85       -0.799    -0.778
+
+6. Which disturbances cost the most?
+--------------------------------------------------------------------------
+  event                        kind             mean J      30%     100%   ratio
+  front@seaboard               wind_front     1235.897   38.797 8449.803  217.80
+  spike@seaboard               wind_spike     1235.897   38.797 8449.803  217.80
+  forecast@allwind             forecast_error  1058.943   33.368 7212.086  216.14
+  trip@largest_farm            unit_trip       996.910   81.681 4884.118   59.80
+  front@mid                    wind_front      411.531   12.638 2722.441  215.42
+  front@south                  wind_front      344.987   12.527 2356.443  188.11
+  front@north                  wind_front      311.041   15.880 1882.443  118.54
+  trip@hvdc                    unit_trip       145.254   97.334  494.259    5.08

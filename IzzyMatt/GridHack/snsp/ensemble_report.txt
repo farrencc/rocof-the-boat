@@ -1,0 +1,116 @@
+SNSP AGAINST THE COST OF THE FREQUENCY RESPONSE
+==========================================================================
+
+  240 configurations x 20 disturbances, J = sum_bus sum_event int [tau^2 (df/dt)^2 + f^2] dt
+
+1. Is there a correlation?
+--------------------------------------------------------------------------
+  Pearson  r = +0.707  (p = 1.26e-37)
+  Spearman rho = +0.957  (p = 2.17e-129)
+  linear fit    J = 7507.26 * SNSP + -2263.68   R^2 = 0.499
+  quadratic fit                              R^2 = 0.702   (curvature +24911.8)
+  J at SNSP 30% vs 100%: 1070.4 -> 10504.9 (9.81x)
+  excluding the SNSP = 100% stratum: r = +0.868, rho = +0.947
+  log fit  log J = 2.42 * SNSP + 6.08   R^2 = 0.785
+  i.e. J multiplies by 1.27 per 10 points of SNSP, doubling every 29 points
+
+2. What do the two terms do separately?
+--------------------------------------------------------------------------
+  quantity                     30% SNSP  100% SNSP   ratio  r vs SNSP
+  J total                      1070.354  10504.934    9.81     +0.707
+    gradient term (RoCoF)       712.720   1489.574    2.09     +0.891
+    field term (deviation)      357.635   9015.359   25.21     +0.681
+  J system-wide (COI)           429.058   9662.218   22.52     +0.689
+  J local (J - COI)             641.296    842.716    1.31     +0.786
+  J excluding hit bus           963.599  10238.458   10.63     +0.706
+  worst 500 ms RoCoF Hz/s         0.732      1.291    1.77     +0.787
+  worst |f| Hz                    0.399      1.007    2.52     +0.837
+  share over 0.5 Hz/s             0.008      0.907  119.49     +0.742
+  share over 1 Hz/s (code)        0.000      0.106     inf     +0.449
+  share past UFLS (-0.8 Hz)       0.000      0.250     inf     +0.433
+  no post-event equilibrium       0.000      0.000       -       +nan
+  worst line, post-event          0.279      0.596    2.14     +0.901
+  total imbalance applied p.u.      8.840      8.840    1.00       +nan
+  stored energy p.u. s           51.091     11.270    0.22     -0.950
+  primary reserve               201.625      0.000    0.00     -0.950
+
+3. How much does SNSP not explain?
+--------------------------------------------------------------------------
+  residual sd about the quadratic fit: 1252.81 (47.9% of mean J)
+  spread within an SNSP level (mean of max/min): 1.50x
+  the widest level: 2.09x at SNSP 85%
+
+    SNSP    mean J      sd       min       max
+     30%   1070.35   72.45    992.42   1245.09
+     35%   1199.57  103.73    992.90   1320.23
+     40%   1202.26  128.46   1025.90   1392.32
+     45%   1304.08  115.78   1027.36   1503.25
+     50%   1490.31   94.05   1245.34   1591.12
+     55%   1562.55  168.39   1320.57   1825.85
+     60%   1739.31  199.83   1291.49   1927.26
+     65%   1930.29  268.25   1405.46   2242.30
+     70%   1930.54  222.96   1523.09   2238.64
+     75%   2412.39  428.47   1784.52   2954.85
+     80%   2552.03  574.22   1783.04   3235.81
+     85%   2967.15  759.28   1928.61   4027.89
+     90%   3709.02  771.89   2666.72   4573.23
+     95%   3665.82  550.40   2957.02   4574.09
+    100%  10504.93    2.85  10501.11  10508.58
+
+4. Which variable is the cost actually following?
+--------------------------------------------------------------------------
+  predictor                             r  R^2 alone  R^2 with SNSP
+  SNSP                             +0.707      0.702          0.702
+  system inertia (sum H S)         -0.774      0.887          0.895
+  primary reserve (sum droop)      -0.774      0.887          0.895
+  machines synchronised            -0.763      0.870          0.870
+  mean hops to a machine           +0.923      0.868          0.913
+  share of wind on the coast       +0.180      0.092          0.704
+  output on radial farms           +0.665      0.510          0.703
+
+  (SNSP alone, quadratic: R^2 = 0.702)
+
+5. Do other cost functions agree?
+--------------------------------------------------------------------------
+  J and its two terms are integrals over the whole grid and the whole window.
+  The top-n scores are the other shape a limit can take: the 500 ms RoCoF, or the
+  downward nadir, at the n worst buses, added up and averaged over events.
+
+  score                              30%      100%   ratio  rho vs SNSP  rho vs J
+  J  (both terms)               1070.354 10504.934    9.81       +0.957    +1.000
+  J gradient term only           712.720  1489.574    2.09       +0.926    +0.977
+  J field term only              357.635  9015.359   25.21       +0.952    +0.997
+  500 ms RoCoF, worst bus          0.428     0.903    2.11       +0.906    +0.928
+  500 ms RoCoF, worst 5            1.826     4.313    2.36       +0.917    +0.940
+  500 ms RoCoF, worst 10           3.334     8.400    2.52       +0.918    +0.944
+    the same, system-wide          0.188     0.704    3.74       +0.949    +0.994
+  nadir, worst bus                 0.274     0.657    2.40       +0.957    +0.997
+  nadir, worst 5                   1.169     3.285    2.81       +0.957    +0.997
+  nadir, worst 10                  2.267     6.568    2.90       +0.957    +0.997
+    the same, system-wide          0.202     0.656    3.25       +0.953    +0.996
+  worst bus / system, RoCoF        2.278     1.283    0.56       -0.829    -0.877
+  worst bus / system, nadir        1.357     1.003    0.74       -0.945    -0.993
+
+6. Which disturbances cost the most?
+--------------------------------------------------------------------------
+  event                        kind             mean J      30%     100%   ratio
+  infeed_loss@HVDC-East        infeed_loss     260.681  131.455  940.841    7.16
+  infeed_loss@SY-North         infeed_loss     228.998   78.190  937.132   11.99
+  wind_lull@seaboard           wind_lull       215.939   70.646  987.866   13.98
+  infeed_loss@SY-East          infeed_loss     214.278   54.859  917.997   16.73
+  infeed_loss@SY-Shannon       infeed_loss     190.991   49.156  889.242   18.09
+  load_reject@Dublin           load_reject     134.659   47.946  604.657   12.61
+  load_step@Waterford          load_step       122.819   69.878  423.920    6.07
+  diffuse_load@all             diffuse_load    114.781   28.803  585.036   20.31
+  wind_drop@WF-Donegal         wind_drop       112.196   68.979  343.298    4.98
+  load_step@Limerick           load_step       103.450   45.344  408.199    9.00
+  wind_drop@WF-Mizen           wind_drop       103.092   57.545  336.744    5.85
+  load_step@Belfast            load_step        99.510   41.262  402.046    9.74
+  wind_drop@WF-Mayo            wind_drop        96.840   50.978  330.812    6.49
+  load_step@Cork               load_step        94.765   37.316  400.853   10.74
+  wind_drop@WF-Clare           wind_drop        92.137   45.925  326.192    7.10
+  wind_drop@WF-Connemara       wind_drop        91.879   44.180  328.187    7.43
+  wind_drop@WF-Bantry          wind_drop        89.662   43.871  324.461    7.40
+  load_step@Dublin             load_step        86.182   30.686  386.980   12.61
+  wind_drop@WF-Sligo           wind_drop        84.677   38.943  318.625    8.18
+  wind_drop@WF-Blackwater      wind_drop        78.502   34.392  311.847    9.07

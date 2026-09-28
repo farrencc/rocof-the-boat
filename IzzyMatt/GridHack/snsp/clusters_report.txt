@@ -1,0 +1,49 @@
+SPECTRAL CLUSTERING OF THE FROZEN GRID
+==========================================================================
+
+  normalised Laplacian of the coupling matrix Kij, 100 buses, 166 lines
+
+1. The spectrum and the eigengap heuristic
+--------------------------------------------------------------------------
+  k   lambda_k   gap to lambda_(k+1)
+   2    0.02352      0.01637
+   3    0.03989      0.01891
+   4    0.05880      0.04339   <- chosen
+   5    0.10219      0.02875
+   6    0.13095      0.00457
+   7    0.13551      0.02036
+   8    0.15587      0.03016
+   9    0.18603      0.03767
+  10    0.22370      0.01574
+  11    0.23944      0.01972
+  12    0.25917      0.04297
+
+  the chosen k = 4 wins by 1.01x over the runner-up gap
+  (a mesh is not a barbell: read this as a preference, not a partition that was hiding in the graph)
+
+2. The clusters
+--------------------------------------------------------------------------
+  id  buses  conductance  wind  hvdc  sync  city   demand   capacity  rows      cols
+   0     25        0.097     6     0     1     0    0.982     8.050  0-4       0-4
+   1     24        0.116     0     0     1     2    5.745     1.900  0-4       5-9
+   2     21        0.135     0     1     2     2    3.073     6.700  4-9       5-9
+   3     30        0.110     6     0     1     1    2.200     9.750  5-9       0-6
+
+  coupling cut by the partition: 76.0 p.u. of 664.5 total (11.4%)
+
+3. The map
+--------------------------------------------------------------------------
+
+    0 0 0 0 0 1 1 1 1 1
+    0 0 0 0 0 1 1 1 1 1
+    0 0 0 0 0 1 1 1 1 1
+    0 0 0 0 0 1 1 1 1 1
+    0 0 0 0 0 1 1 1 1 2
+    3 3 3 3 3 3 3 2 2 2
+    3 3 3 3 3 3 2 2 2 2
+    3 3 3 3 3 3 2 2 2 2
+    3 3 3 3 3 3 2 2 2 2
+    3 3 3 3 3 2 2 2 2 2
+
+  rows run north 0 -> south 9, columns west 0 -> east 9;
+  the west coast is column 0 and the radial stubs are rows 2, 3, 4, 7.

@@ -1,0 +1,99 @@
+TOY GRID FOR THE SNSP INVESTIGATION
+======================================================================
+
+Structure
+  buses                                  100
+  lines                                  166
+  lines_by_class                         {'main': 148, 'spur': 13, 'backbone': 5}
+  missing_nn_links                       19
+  mean_degree                            3.32
+  degree_1_buses                         4
+  generators                             18
+  wind_farms                             12
+  radial_wind_farms                      4
+  synchronous_stations                   5
+  cities                                 5
+  demand_total_pu                        12.0
+  stored_energy_all_on_pu_s              61.04
+  city_share_of_demand                   0.65
+  nameplate_non_synchronous_pu           13.799999999999997
+  nameplate_synchronous_pu               12.600000000000001
+  west_coast_share_of_wind_nameplate     0.7727
+  max_snsp                               1.0
+  min_synchronous_separation_hops        3
+  min_synchronous_separation_squares     5
+  reference_snsp                         0.7
+
+Generators (nameplate, p.u.)
+----------------------------------------------------------------------
+  WF-Sperrin     (0,4)  wind   cap  0.75  H  0.1 s  degree 3
+  WF-Donegal     (1,0)  wind   cap  1.35  H  0.1 s  degree 2
+  SY-North       (1,6)  sync   cap  1.90  H  4.0 s  degree 5
+  WF-Mayo        (2,0)  wind   cap  1.20  H  0.1 s  degree 1
+  WF-Sligo       (2,2)  wind   cap  0.75  H  0.1 s  degree 4
+  WF-Connemara   (3,0)  wind   cap  1.20  H  0.1 s  degree 1
+  SY-Midlands    (3,2)  sync   cap  1.60  H  4.0 s  degree 4
+  WF-Clare       (4,0)  wind   cap  1.20  H  0.1 s  degree 1
+  HVDC-East      (4,9)  hvdc   cap  0.60  H  0.1 s  degree 3
+  WF-Kerry       (5,0)  wind   cap  1.35  H  0.1 s  degree 2
+  SY-East        (5,8)  sync   cap  3.40  H  4.0 s  degree 4
+  WF-CorkWest    (6,0)  wind   cap  1.35  H  0.1 s  degree 2
+  WF-Shannon     (6,2)  wind   cap  0.75  H  0.1 s  degree 3
+  WF-Bantry      (7,0)  wind   cap  1.20  H  0.1 s  degree 1
+  SY-Shannon     (7,3)  sync   cap  3.00  H  4.0 s  degree 6
+  WF-Mizen       (8,0)  wind   cap  1.35  H  0.1 s  degree 2
+  WF-Blackwater  (8,3)  wind   cap  0.75  H  0.1 s  degree 4
+  SY-Harbour     (9,6)  sync   cap  2.70  H  4.0 s  degree 4
+
+Demand (p.u.)
+----------------------------------------------------------------------
+  Belfast        (0,9)   1.60
+  Dublin         (3,9)   3.00
+  Limerick       (9,2)   1.00
+  Cork           (9,5)   1.50
+  Waterford      (9,8)   0.70
+  rural x77               4.20 total (0.0545 each)
+
+Reference dispatch (SNSP 70%)
+----------------------------------------------------------------------
+  non-synchronous  8.40 p.u. (70.0% of generation, 61% of nameplate)
+  synchronous      3.60 p.u. (29% of nameplate)
+  stored energy   61.0 p.u. s with every machine synchronised;
+                  11.3 with none of them -- the range the ensemble moves over
+
+Feasible SNSP range
+----------------------------------------------------------------------
+  SNSP   0.0%   wind  0.00   sync 12.00   machines at  95.2% of nameplate
+  SNSP  20.0%   wind  1.80   sync  9.60   machines at  76.2% of nameplate
+  SNSP  40.0%   wind  4.20   sync  7.20   machines at  57.1% of nameplate
+  SNSP  60.0%   wind  6.60   sync  4.80   machines at  38.1% of nameplate
+  SNSP  70.0%   wind  7.80   sync  3.60   machines at  28.6% of nameplate
+  SNSP  80.0%   wind  9.00   sync  2.40   machines at  19.0% of nameplate
+  SNSP 100.0%   wind 11.40   sync  0.00   machines at   0.0% of nameplate
+
+Radial (single-circuit) wind farms
+----------------------------------------------------------------------
+  WF-Mayo        -> b21    only, K = 2.5 (spur), nameplate 1.20
+  WF-Connemara   -> b31    only, K = 2.5 (spur), nameplate 1.20
+  WF-Clare       -> b41    only, K = 2.5 (spur), nameplate 1.20
+  WF-Bantry      -> b71    only, K = 2.5 (spur), nameplate 1.20
+
+Static feasibility across the SNSP range
+----------------------------------------------------------------------
+  SNSP    worst line loading   max angle gap   worst line
+    0.0%            0.278          16.1 deg   Cork-SY-Harbour (main)
+   12.5%            0.256          14.9 deg   Cork-SY-Harbour (main)
+   25.0%            0.233          13.5 deg   Dublin-HVDC-East (main)
+   37.5%            0.214          12.3 deg   Dublin-HVDC-East (main)
+   50.0%            0.256          14.9 deg   WF-CorkWest-b61 (spur)
+   62.5%            0.327          19.1 deg   WF-CorkWest-b61 (spur)
+   75.0%            0.398          23.5 deg   WF-CorkWest-b61 (spur)
+   87.5%            0.468          27.9 deg   WF-CorkWest-b61 (spur)
+  100.0%            0.538          32.5 deg   WF-CorkWest-b61 (spur)
+
+  A steady state exists at every level, and the most-loaded circuit peaks
+  at about half its static limit at SNSP = 100%, so nothing below is an
+  artefact of the network being pushed past the point where it can hold
+  synchronism at all.  Note which circuit it is: above ~40% SNSP the
+  binding line stops being an urban import and becomes a west-coast spur
+  exporting wind.

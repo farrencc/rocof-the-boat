@@ -1,0 +1,299 @@
+{
+  "description": "Irish-caricature toy grid for the SNSP investigation",
+  "L": 10,
+  "H_by_role": {
+    "sync": 4.0,
+    "wind": 0.1,
+    "hvdc": 0.1,
+    "city": 0.2,
+    "load": 0.2
+  },
+  "S_base_floor_pu": 0.5,
+  "K_by_class": {
+    "backbone": 8.0,
+    "main": 4.0,
+    "spur": 2.5
+  },
+  "demand_total_pu": 12.0,
+  "radial_wind_rows": [
+    2,
+    3,
+    4,
+    7
+  ],
+  "backbone_lines": [
+    [
+      [
+        6,
+        1
+      ],
+      [
+        7,
+        3
+      ]
+    ],
+    [
+      [
+        7,
+        3
+      ],
+      [
+        5,
+        6
+      ]
+    ],
+    [
+      [
+        5,
+        6
+      ],
+      [
+        3,
+        9
+      ]
+    ],
+    [
+      [
+        9,
+        6
+      ],
+      [
+        6,
+        7
+      ]
+    ],
+    [
+      [
+        1,
+        6
+      ],
+      [
+        0,
+        9
+      ]
+    ]
+  ],
+  "missing_nn_links": [
+    [
+      [
+        1,
+        0
+      ],
+      [
+        2,
+        0
+      ]
+    ],
+    [
+      [
+        2,
+        0
+      ],
+      [
+        3,
+        0
+      ]
+    ],
+    [
+      [
+        3,
+        0
+      ],
+      [
+        4,
+        0
+      ]
+    ],
+    [
+      [
+        4,
+        0
+      ],
+      [
+        5,
+        0
+      ]
+    ],
+    [
+      [
+        6,
+        0
+      ],
+      [
+        7,
+        0
+      ]
+    ],
+    [
+      [
+        7,
+        0
+      ],
+      [
+        8,
+        0
+      ]
+    ],
+    [
+      [
+        4,
+        4
+      ],
+      [
+        5,
+        4
+      ]
+    ],
+    [
+      [
+        4,
+        5
+      ],
+      [
+        5,
+        5
+      ]
+    ],
+    [
+      [
+        4,
+        6
+      ],
+      [
+        5,
+        6
+      ]
+    ],
+    [
+      [
+        0,
+        7
+      ],
+      [
+        1,
+        7
+      ]
+    ],
+    [
+      [
+        1,
+        2
+      ],
+      [
+        1,
+        3
+      ]
+    ],
+    [
+      [
+        2,
+        5
+      ],
+      [
+        2,
+        6
+      ]
+    ],
+    [
+      [
+        2,
+        3
+      ],
+      [
+        3,
+        3
+      ]
+    ],
+    [
+      [
+        3,
+        4
+      ],
+      [
+        3,
+        5
+      ]
+    ],
+    [
+      [
+        5,
+        2
+      ],
+      [
+        6,
+        2
+      ]
+    ],
+    [
+      [
+        6,
+        4
+      ],
+      [
+        7,
+        4
+      ]
+    ],
+    [
+      [
+        6,
+        7
+      ],
+      [
+        6,
+        8
+      ]
+    ],
+    [
+      [
+        7,
+        5
+      ],
+      [
+        7,
+        6
+      ]
+    ],
+    [
+      [
+        8,
+        1
+      ],
+      [
+        8,
+        2
+      ]
+    ]
+  ],
+  "summary": {
+    "buses": 100,
+    "lines": 166,
+    "lines_by_class": {
+      "main": 148,
+      "spur": 13,
+      "backbone": 5
+    },
+    "missing_nn_links": 19,
+    "mean_degree": 3.32,
+    "degree_1_buses": 4,
+    "generators": 18,
+    "wind_farms": 12,
+    "radial_wind_farms": 4,
+    "synchronous_stations": 5,
+    "cities": 5,
+    "demand_total_pu": 12.0,
+    "stored_energy_all_on_pu_s": 61.04,
+    "city_share_of_demand": 0.65,
+    "nameplate_non_synchronous_pu": 13.799999999999997,
+    "nameplate_synchronous_pu": 12.600000000000001,
+    "west_coast_share_of_wind_nameplate": 0.7727,
+    "max_snsp": 1.0,
+    "min_synchronous_separation_hops": 3,
+    "min_synchronous_separation_squares": 5,
+    "reference_snsp": 0.7
+  },
+  "sha256": {
+    "grid_buses.csv": "d0ab4f89838d20ecdb64ce6a6edb8bd27b8f8968b407e3e49898040a794d1ed7",
+    "grid_lines.csv": "cf5869304fbf663189c794dd16ef8adf11aca1db2e3a26e0545724a10d21d3a9"
+  }
+}

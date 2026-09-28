@@ -1,0 +1,82 @@
+SINGLE-EDGE SWEEP
+==============================================================================
+
+  operating point   config #128, SNSP 70.0%
+  disturbances      sourced, 20 columns
+  kappa             2.5 p.u.
+  band scored       0.01 to 2.155 Hz   (308 of 426 solved points)
+  highest physical mode 1.827 Hz; lowest regularisation mode 2.543 Hz
+  measurement       lag 0.1 s, RoCoF window 0.5 s
+  candidates        4950 (4784 new, 166 reinforcements)
+  flagged           0  (near-cancelling denominator)
+
+  no edge at all:
+
+      C_freq      9.6259   peak at   1.831 Hz
+      C_rocof    10.7180   peak at   1.814 Hz
+      C_H2     5.1693
+      C_Linf        6.8839
+
+  best ten by frequency deviation  (r_C_freq, 1.000 = no edge):
+
+       31-96   load/sync  len  7.8   0.7509   [freq 0.7509  rocof 0.2446  H2 0.7043]
+        2-97   load/load  len 10.3   0.7573   [freq 0.7573  rocof 0.3341  H2 0.7209]
+       31-97   load/load  len  8.5   0.7616   [freq 0.7616  rocof 0.2695  H2 0.7298]
+       11-98   load/city  len 10.6   0.7619   [freq 0.7619  rocof 0.4183  H2 0.7304]
+       22-97   wind/load  len  8.6   0.7628   [freq 0.7628  rocof 0.2687  H2 0.7143]
+       12-98   load/city  len 10.0   0.7631   [freq 0.7631  rocof 0.4190  H2 0.7382]
+       21-96   load/sync  len  8.6   0.7636   [freq 0.7636  rocof 0.2190  H2 0.6998]
+       13-97   load/load  len  8.9   0.7667   [freq 0.7667  rocof 0.3430  H2 0.7457]
+       32-97   sync/load  len  7.8   0.7677   [freq 0.7677  rocof 0.2782  H2 0.7374]
+       42-96   load/sync  len  6.4   0.7679   [freq 0.7679  rocof 0.2824  H2 0.7304]
+
+  best ten by windowed RoCoF  (r_C_rocof, 1.000 = no edge):
+
+       11-96   load/sync  len  9.4   0.2062   [freq 0.7947  rocof 0.2062  H2 0.7034]
+        1-96   load/sync  len 10.3   0.2110   [freq 0.8060  rocof 0.2110  H2 0.7105]
+       12-96   load/sync  len  8.9   0.2156   [freq 0.8025  rocof 0.2156  H2 0.7076]
+        2-96   load/sync  len  9.8   0.2176   [freq 0.7739  rocof 0.2176  H2 0.7131]
+       21-96   load/sync  len  8.6   0.2190   [freq 0.7636  rocof 0.2190  H2 0.6998]
+       22-96   wind/sync  len  8.1   0.2238   [freq 0.7942  rocof 0.2238  H2 0.7057]
+        3-96   load/sync  len  9.5   0.2363   [freq 0.7803  rocof 0.2363  H2 0.7282]
+       10-96   wind/sync  len 10.0   0.2369   [freq 0.8101  rocof 0.2369  H2 0.7170]
+       23-96   load/sync  len  7.6   0.2411   [freq 0.8084  rocof 0.2411  H2 0.7257]
+       13-96   load/sync  len  8.5   0.2444   [freq 0.7968  rocof 0.2444  H2 0.7336]
+
+  best ten by H2 (the screen)  (r_C_H2, 1.000 = no edge):
+
+       21-96   load/sync  len  8.6   0.6998   [freq 0.7636  rocof 0.2190  H2 0.6998]
+       11-96   load/sync  len  9.4   0.7034   [freq 0.7947  rocof 0.2062  H2 0.7034]
+       31-96   load/sync  len  7.8   0.7043   [freq 0.7509  rocof 0.2446  H2 0.7043]
+       22-96   wind/sync  len  8.1   0.7057   [freq 0.7942  rocof 0.2238  H2 0.7057]
+       12-96   load/sync  len  8.9   0.7076   [freq 0.8025  rocof 0.2156  H2 0.7076]
+       11-97   load/load  len 10.0   0.7087   [freq 0.7709  rocof 0.3182  H2 0.7087]
+        1-96   load/sync  len 10.3   0.7105   [freq 0.8060  rocof 0.2110  H2 0.7105]
+       21-97   load/load  len  9.2   0.7110   [freq 0.7708  rocof 0.2766  H2 0.7110]
+       32-96   sync/sync  len  7.2   0.7116   [freq 0.7795  rocof 0.2528  H2 0.7116]
+        2-96   load/sync  len  9.8   0.7131   [freq 0.7739  rocof 0.2176  H2 0.7131]
+
+  Braess: candidates that make it worse
+
+      by C_freq   1656 of 4784  ( 34.6%),  worst 1.0866
+      by C_rocof   362 of 4784  (  7.6%),  worst 1.0101
+      by H2        215 of 4784  (  4.5%),  worst 1.0692
+
+  do the scores agree?  (Spearman over the new edges)
+
+          C_freq     C_rocof        C_H2   C_H2rocof      C_Linf
+          1.0000      0.7006      0.8913      0.8057      0.6301   C_freq
+          0.7006      1.0000      0.6008      0.8542      0.5596   C_rocof
+          0.8913      0.6008      1.0000      0.8667      0.5279   C_H2
+          0.8057      0.8542      0.8667      1.0000      0.6354   C_H2rocof
+          0.6301      0.5596      0.5279      0.6354      1.0000   C_Linf
+
+      top-20 overlap  C_freq vs C_rocof: 4/20
+      top-20 overlap  C_freq vs H2     : 11/20
+
+  the winner
+
+      buses 31 (load) - 96 (sync),  lattice length 7.81
+      C_freq  x0.7509   C_rocof x0.2446   H2 x0.7043   C_Linf x0.6960
+      rank by C_rocof 11 of 4784
+      best reinforcement of an existing circuit: x0.9867  (buses 57-67)

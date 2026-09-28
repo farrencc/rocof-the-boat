@@ -1,0 +1,27 @@
+THE WHOLE ENSEMBLE, WITH ONE MORE CIRCUIT IN IT
+============================================================================
+
+  edge 4-73, kappa 2.5, events sourced
+  240 configurations re-solved, 313 s
+  'before' swarm reproduces ../snsp/ensemble_src.csv to 2.2e-16
+
+  risk with the edge, relative to the same configuration without it:
+
+      measure          mean   median     best    worst    improved
+
+      rocof_top5     0.9790   0.9890   0.8549   1.0411    159/240
+      dev_top5       0.9973   0.9976   0.9911   1.0069    211/240
+      rocof_top1     0.9871   0.9956   0.8549   1.0726    138/240
+      dev_top1       0.9982   0.9985   0.9929   1.0039    167/240
+      nadir_top5     0.9971   0.9973   0.9902   1.0067    204/240
+
+  by SNSP band (mean ratio):
+
+            SNSP   rocof_top5     dev_top5   rocof_top1
+
+       30- 50%       0.9667       0.9957       0.9743
+       50- 70%       0.9597       0.9971       0.9718
+       70- 85%       0.9736       0.9973       0.9850
+       85-101%       1.0147       0.9992       1.0167
+
+  the edge is chosen at one operating point; these rows are whether it survives the others.

@@ -1,0 +1,74 @@
+8x8 torus, 64 buses, 16 of them converted to inverter
+total inertia identical in every configuration; all-synchronous COI RoCoF would be 0.0488 Hz/s
+
+  ran block 4x4 (all in one corner)
+  ran two blocks of 8
+  ran band of 2 rows
+  ran dispersed sublattice
+  ran 120 random placements
+
+==============================================================================
+COI (system-wide) 500 ms RoCoF, same in every row: 0.0595 Hz/s
+
+RoCoF AT THE CONVERTER BUSES, RELATIVE TO THE SYNCHRONOUS BUSES
+(ratio > 1 means the converter buses are the exposed ones)
+
+  configuration                        500ms   worst 500ms   instantaneous
+  block 4x4 (all in one corner)        0.945         1.922           17.57
+  two blocks of 8                      1.015         1.588           13.32
+  band of 2 rows                       0.951         1.949           18.12
+  dispersed sublattice                 1.005         0.985            4.63
+  random placements (mean)             1.001         1.151            7.49
+
+ABSOLUTE NUMBERS (Hz/s), averaged over a load step at every bus
+
+  configuration                     500ms conv  500ms sync  worst conv  worst sync
+  block 4x4 (all in one corner)         0.0566      0.0599      0.2329      0.1212
+  two blocks of 8                       0.0610      0.0601      0.1912      0.1205
+  band of 2 rows                        0.0571      0.0600      0.2423      0.1244
+  dispersed sublattice                  0.0612      0.0609      0.1105      0.1123
+
+SPATIAL UNEVENNESS OF THE FIELD (sd across buses, Hz/s)
+
+  configuration                        500ms   worst 500ms
+  block 4x4 (all in one corner)      0.00296       0.04846
+  two blocks of 8                    0.00126       0.03082
+  band of 2 rows                     0.00242       0.05110
+  dispersed sublattice               0.00130       0.00507
+  random placements (mean)           0.00154       0.01286
+
+WORST SINGLE BUS IN THE GRID (Hz/s)
+
+  configuration                     worst 500ms window
+  block 4x4 (all in one corner)                 0.2378
+  two blocks of 8                               0.1974
+  band of 2 rows                                0.2423
+  dispersed sublattice                          0.1164
+  random placements (mean)                      0.1590
+
+  clustering the same 16 converters into one corner raises the worst bus
+  from 0.1164 to 0.2378 Hz/s (+104.4%)
+
+MAPS: worst 500 ms window at each bus (Hz/s), converters marked C
+
+  block 4x4 (all in one corner)   [system value 0.059]
+    *0.226 *0.238 *0.238 *0.226  0.119  0.123  0.123  0.119
+    *0.238 *0.230 *0.230 *0.238  0.121  0.122  0.122  0.121
+    *0.238 *0.230 *0.230 *0.238  0.121  0.122  0.122  0.121
+    *0.226 *0.238 *0.238 *0.226  0.119  0.123  0.123  0.119
+     0.119  0.121  0.121  0.119  0.118  0.123  0.123  0.118
+     0.123  0.122  0.122  0.123  0.123  0.121  0.121  0.123
+     0.123  0.122  0.122  0.123  0.123  0.121  0.121  0.123
+     0.119  0.121  0.121  0.119  0.118  0.123  0.123  0.118
+
+  dispersed sublattice   [system value 0.060]
+    *0.111  0.116 *0.111  0.116 *0.111  0.116 *0.111  0.116
+     0.116  0.104  0.116  0.104  0.116  0.104  0.116  0.104
+    *0.111  0.116 *0.111  0.116 *0.111  0.116 *0.111  0.116
+     0.116  0.104  0.116  0.104  0.116  0.104  0.116  0.104
+    *0.111  0.116 *0.111  0.116 *0.111  0.116 *0.111  0.116
+     0.116  0.104  0.116  0.104  0.116  0.104  0.116  0.104
+    *0.111  0.116 *0.111  0.116 *0.111  0.116 *0.111  0.116
+     0.116  0.104  0.116  0.104  0.116  0.104  0.116  0.104
+
+wrote designed.csv

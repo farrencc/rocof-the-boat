@@ -1,0 +1,166 @@
+{
+  "description": "scaled disturbance set for the SNSP ensemble",
+  "n_events": 8,
+  "sizes_pu": {
+    "load_step": 0.4,
+    "wind_drop": 0.35,
+    "infeed_loss": 0.6,
+    "lull_each": 0.08,
+    "load_reject": 0.5,
+    "diffuse_total": 0.5,
+    "front_depth": 0.35,
+    "front_reach": 2.5,
+    "seaboard_depth": 0.2,
+    "allwind_depth": 0.15,
+    "spike_depth": 0.2,
+    "drop_fraction": 0.4,
+    "lull_fraction": 0.1,
+    "largest_unit": 1.0
+  },
+  "events": [
+    {
+      "name": "front@north",
+      "kind": "wind_front",
+      "scaled": true,
+      "net_pu": 0.0,
+      "buses": [
+        4,
+        10,
+        20,
+        22,
+        30,
+        40,
+        50,
+        60,
+        62,
+        70,
+        80,
+        83
+      ]
+    },
+    {
+      "name": "front@mid",
+      "kind": "wind_front",
+      "scaled": true,
+      "net_pu": 0.0,
+      "buses": [
+        4,
+        10,
+        20,
+        22,
+        30,
+        40,
+        50,
+        60,
+        62,
+        70,
+        80,
+        83
+      ]
+    },
+    {
+      "name": "front@south",
+      "kind": "wind_front",
+      "scaled": true,
+      "net_pu": 0.0,
+      "buses": [
+        4,
+        10,
+        20,
+        22,
+        30,
+        40,
+        50,
+        60,
+        62,
+        70,
+        80,
+        83
+      ]
+    },
+    {
+      "name": "front@seaboard",
+      "kind": "wind_front",
+      "scaled": true,
+      "net_pu": 0.0,
+      "buses": [
+        10,
+        20,
+        30,
+        40,
+        50,
+        60,
+        70,
+        80
+      ]
+    },
+    {
+      "name": "forecast@allwind",
+      "kind": "forecast_error",
+      "scaled": true,
+      "net_pu": 0.0,
+      "buses": [
+        4,
+        10,
+        20,
+        22,
+        30,
+        40,
+        50,
+        60,
+        62,
+        70,
+        80,
+        83
+      ]
+    },
+    {
+      "name": "spike@seaboard",
+      "kind": "wind_spike",
+      "scaled": true,
+      "net_pu": 0.0,
+      "buses": [
+        10,
+        20,
+        30,
+        40,
+        50,
+        60,
+        70,
+        80
+      ]
+    },
+    {
+      "name": "trip@hvdc",
+      "kind": "unit_trip",
+      "scaled": true,
+      "net_pu": 0.0,
+      "buses": [
+        49
+      ]
+    },
+    {
+      "name": "trip@largest_farm",
+      "kind": "unit_trip",
+      "scaled": true,
+      "net_pu": 0.0,
+      "buses": [
+        4,
+        10,
+        20,
+        22,
+        30,
+        40,
+        50,
+        60,
+        62,
+        70,
+        80,
+        83
+      ]
+    }
+  ],
+  "sha256": {
+    "perturbations_scaled.csv": "9bccc8b77b33b9bd10a03aeb15d39f442b6fd793bac4a40a6d3ee98a3a309512"
+  }
+}

@@ -1,0 +1,30 @@
+FIXED DISTURBANCE SET
+======================================================================
+
+  20 events, the same rule applied to every configuration
+
+  event                        kind            net (p.u.)  buses
+----------------------------------------------------------------------
+  load_step@Belfast            load_step           -0.400  1
+  load_step@Dublin             load_step           -0.400  1
+  load_step@Limerick           load_step           -0.400  1
+  load_step@Cork               load_step           -0.400  1
+  load_step@Waterford          load_step           -0.400  1
+  wind_drop@WF-Mayo            wind_drop           -0.350  1
+  wind_drop@WF-Connemara       wind_drop           -0.350  1
+  wind_drop@WF-Clare           wind_drop           -0.350  1
+  wind_drop@WF-Bantry          wind_drop           -0.350  1
+  wind_drop@WF-Donegal         wind_drop           -0.350  1
+  wind_drop@WF-Mizen           wind_drop           -0.350  1
+  wind_drop@WF-Sligo           wind_drop           -0.350  1
+  wind_drop@WF-Blackwater      wind_drop           -0.350  1
+  infeed_loss@SY-East          infeed_loss         -0.600  1
+  infeed_loss@SY-Shannon       infeed_loss         -0.600  1
+  infeed_loss@SY-North         infeed_loss         -0.600  1
+  infeed_loss@HVDC-East        infeed_loss         -0.600  1
+  wind_lull@seaboard           wind_lull           -0.640  8
+  load_reject@Dublin           load_reject          0.500  1
+  diffuse_load@all             diffuse_load        -0.500  100
+
+  net imbalance: min 0.35, max 0.64 p.u. against 12 p.u. of demand
+  (2.9% to 5.3% of system demand)

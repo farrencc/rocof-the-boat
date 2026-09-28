@@ -1,0 +1,62 @@
+8x8 torus, governor droop 20 pu/pu, noise correlation time 1.0 s, 8 random draws per level
+Total inertia falls as the share rises.  'step' is normalised to the
+all-synchronous grid; noise figures are raw 500 ms RoCoF sd (Hz/s).
+
+   share | step: clus    rand  ratio | noise: clus    rand  ratio |     COI
+  ----------------------------------------------------------------------------
+    6.2% |      1.221   1.098   1.11 |      0.1300  0.1213   1.07 |  0.0136
+   12.5% |      1.555   1.144   1.36 |      0.1324  0.1257   1.05 |  0.0203
+   18.8% |      1.767   1.311   1.35 |      0.1394  0.1315   1.06 |  0.0263
+   25.0% |      2.134   1.394   1.53 |      0.1517  0.1335   1.14 |  0.0322
+   31.2% |      2.230   1.594   1.40 |      0.1563  0.1401   1.12 |  0.0384
+   37.5% |      2.487   1.804   1.38 |      0.1613  0.1432   1.13 |  0.0450
+   43.8% |      2.583   1.969   1.31 |      0.1595  0.1476   1.08 |  0.0524
+   50.0% |      2.775   2.320   1.20 |      0.1620  0.1541   1.05 |  0.0608
+   56.2% |      3.173   2.524   1.26 |      0.1749  0.1591   1.10 |  0.0705
+   62.5% |      3.302   2.853   1.16 |      0.1781  0.1676   1.06 |  0.0822
+   68.8% |      3.232   3.207   1.01 |      0.1797  0.1760   1.02 |  0.0967
+   75.0% |      3.434   3.539   0.97 |      0.1905  0.1877   1.02 |  0.1156
+   81.2% |      3.851   3.899   0.99 |      0.2185  0.2054   1.06 |  0.1414
+
+CONTROL: the same total fluctuation spread over every bus instead
+of sitting on the converters -- clustering then stops mattering:
+
+   share  clustered   random   ratio
+    6.2%     0.1610   0.1609    1.00
+   12.5%     0.1612   0.1618    1.00
+   18.8%     0.1619   0.1662    0.97
+   25.0%     0.1675   0.1649    1.02
+   31.2%     0.1708   0.1660    1.03
+   37.5%     0.1752   0.1757    1.00
+   43.8%     0.1729   0.1777    0.97
+   50.0%     0.1748   0.1824    0.96
+   56.2%     0.1871   0.1822    1.03
+   62.5%     0.1906   0.1922    0.99
+   68.8%     0.1923   0.2005    0.96
+   75.0%     0.2043   0.2089    0.98
+   81.2%     0.2316   0.2276    1.02
+
+SNSP HEADROOM LOST TO CLUSTERING
+For a clustered grid at share X, the share a randomly-sited grid could
+carry for the same worst-bus RoCoF:
+
+  discrete event:
+    clustered at 12.5%  ->  random siting could carry 30.0%   (+17.5%)
+    clustered at 25.0%  ->  random siting could carry 46.7%   (+21.7%)
+    clustered at 37.5%  ->  random siting could carry 55.1%   (+17.6%)
+    clustered at 50.0%  ->  random siting could carry 61.0%   (+11.0%)
+
+  continuous noise:
+    clustered at 12.5%  ->  random siting could carry 21.6%   (+9.1%)
+    clustered at 25.0%  ->  random siting could carry 47.6%   (+22.6%)
+    clustered at 37.5%  ->  random siting could carry 57.8%   (+20.3%)
+    clustered at 50.0%  ->  random siting could carry 58.3%   (+8.3%)
+
+A global SNSP limit is blind to all of it -- the system-wide RoCoF is
+the same for both geographies at every share:
+    share 12.5%:  COI clustered 0.02033   random 0.02032
+    share 25.0%:  COI clustered 0.03224   random 0.03223
+    share 37.5%:  COI clustered 0.04505   random 0.04503
+    share 50.0%:  COI clustered 0.06076   random 0.06074
+
+wrote snsp.csv

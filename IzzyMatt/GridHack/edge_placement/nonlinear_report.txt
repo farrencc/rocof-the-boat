@@ -1,0 +1,61 @@
+STAGE 5 -- NONLINEAR RE-SOLVE, AND THE RISK IT ACTUALLY BUYS
+==================================================================================
+
+  45 candidates re-solved with the edge present, 112 s
+  config #128, SNSP 70.0%, band 0.01-2.155 Hz, kappa 2.5, events sourced
+  theta* shift, max over candidates: 0.5601 rad
+
+  risk with no edge at all  (../snsp measures, sourced set):
+
+      rocof_top5       1.8860 Hz/s
+      dev_top5         1.2959 Hz
+      rocof_top1       0.4054 Hz/s
+      dev_top1         0.2777 Hz
+      nadir_top5       1.2093 Hz
+      J             1271.8105 Hz^2 s
+
+  1. does the exact cost agree with the screened cost?
+
+      Spearman, screen vs exact   C_freq  +0.786
+                                  C_rocof +0.933
+                                  C_H2    +0.870
+
+  2. does the cost predict the RISK?   (Spearman over the re-solved candidates)
+
+                     rocof_top5     dev_top5   rocof_top1     dev_top1   nadir_top5            J
+
+      C_freq             -0.222       +0.694       -0.226       +0.657       +0.712       +0.645
+      C_rocof            +0.143       +0.853       +0.123       +0.768       +0.825       +0.793
+      C_H2               -0.179       +0.779       -0.186       +0.735       +0.779       +0.744
+
+  3. how much risk does the best edge actually buy?
+
+      measure           best     worst    spread    best edge
+
+      rocof_top5      0.9142    1.0741    0.1598     3-96 
+      dev_top5        0.9908    1.0137    0.0229     1-96 
+      rocof_top1      0.9178    1.0958    0.1781     3-96 
+      dev_top1        0.9923    1.0093    0.0170     1-96 
+      nadir_top5      0.9902    1.0140    0.0238     1-96 
+      J               0.9595    0.9975    0.0380    10-96 
+
+      candidates that raise rocof_top5: 19 of 45
+      candidates that raise dev_top5  : 15 of 45
+      sum against max: Spearman(rocof_top5, rocof_top1) = +0.967
+
+  best ten by rocof_top5  (1.000 = no edge)
+
+           edge         source   len  rocof_t5   dev_t5  rocof_t1   dev_t1        J  screen
+
+        3-96       top C_rocof   9.5    0.9142   0.9938    0.9178   0.9962   0.9803  0.7803
+       13-96       top C_rocof   8.5    0.9192   0.9942    0.9301   0.9957   0.9815  0.7968
+       23-96       top C_rocof   7.6    0.9329   0.9953    0.9356   0.9979   0.9817  0.8084
+       46-73      worst C_freq   4.2    0.9424   1.0034    0.9491   1.0022   0.9903  1.0509
+        2-96       top C_rocof   9.8    0.9532   0.9953    0.9608   0.9963   0.9751  0.7739
+        3-97        top C_freq   9.8    0.9563   0.9983    0.9572   0.9984   0.9840  0.7685
+       13-97        top C_freq   8.9    0.9587   0.9995    0.9733   0.9995   0.9848  0.7667
+       22-96       top C_rocof   8.1    0.9603   0.9963    0.9598   0.9978   0.9763  0.7942
+       13-87            random   8.1    0.9661   0.9984    0.9871   0.9984   0.9838  0.8072
+       12-96       top C_rocof   8.9    0.9677   0.9942    0.9800   0.9957   0.9747  0.8025
+
+  post-fault equilibrium exists for all: True   (worst line at 0.358 of its limit)
