@@ -1,0 +1,11 @@
+pypsa>=1.0
+highspy
+linopy
+pandas
+numpy
+scipy
+pyarrow
+matplotlib
+networkx
+requests
+pytest
