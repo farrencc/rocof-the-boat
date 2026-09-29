@@ -1,0 +1,14 @@
+[c00_dd_only] E0=0.0000 D0=6.7473  T_start=0.009805 T_end=2.381e-05 alpha=0.98
+[c00_dd_only] step   25 T=0.005917 E=-0.3226 D=6.4451 best E=-0.3369 (D=6.4317) best D=6.4317 acc=13/25 infeas=7 calls=666 sizes=[25, 39, 83, 12]
+[c00_dd_only] step   50 T=0.003571 E=-0.5203 D=6.2598 best E=-0.5237 (D=6.2567) best D=6.2567 acc=7/25 infeas=13 calls=1291 sizes=[16, 77, 70, 12]
+[c00_dd_only] step   75 T=0.002155 E=-0.5357 D=6.2454 best E=-0.5357 (D=6.2454) best D=6.2454 acc=8/25 infeas=9 calls=1916 sizes=[13, 76, 83, 12]
+[c00_dd_only] step  100 T=0.0013 E=-0.5357 D=6.2454 best E=-0.5357 (D=6.2454) best D=6.2454 acc=8/25 infeas=8 calls=2541 sizes=[13, 75, 90, 12]
+[c00_dd_only] step  125 T=0.0007847 E=-0.5357 D=6.2454 best E=-0.5357 (D=6.2454) best D=6.2454 acc=9/25 infeas=13 calls=3166 sizes=[13, 76, 90, 12]
+[c00_dd_only] step  150 T=0.0004736 E=-0.5357 D=6.2454 best E=-0.5357 (D=6.2454) best D=6.2454 acc=9/25 infeas=9 calls=3791 sizes=[13, 66, 100, 12]
+[c00_dd_only] step  175 T=0.0002858 E=-0.5357 D=6.2454 best E=-0.5357 (D=6.2454) best D=6.2454 acc=12/25 infeas=11 calls=4416 sizes=[13, 78, 92, 12]
+[c00_dd_only] step  200 T=0.0001725 E=-0.5357 D=6.2454 best E=-0.5357 (D=6.2454) best D=6.2454 acc=5/25 infeas=11 calls=5041 sizes=[13, 80, 85, 12]
+[c00_dd_only] step  225 T=0.0001041 E=-0.5357 D=6.2454 best E=-0.5357 (D=6.2454) best D=6.2454 acc=10/25 infeas=9 calls=5666 sizes=[13, 89, 77, 12]
+[c00_dd_only] step  250 T=6.28e-05 E=-0.5357 D=6.2454 best E=-0.5357 (D=6.2454) best D=6.2454 acc=11/25 infeas=5 calls=6291 sizes=[13, 83, 89, 12]
+[c00_dd_only] step  275 T=3.79e-05 E=-0.5357 D=6.2454 best E=-0.5357 (D=6.2454) best D=6.2454 acc=8/25 infeas=8 calls=6916 sizes=[13, 76, 98, 12]
+[c00_dd_only] step  299 T=2.334e-05 E=-0.5357 D=6.2454 best E=-0.5357 (D=6.2454) best D=6.2454 acc=11/25 infeas=11 calls=7516 sizes=[13, 85, 86, 12]
+[c00_dd_only] done in 76.8s

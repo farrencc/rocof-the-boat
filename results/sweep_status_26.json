@@ -1,0 +1,92 @@
+[
+  {
+    "config_id": "c03_DD4",
+    "ok": true,
+    "runtime_s": 54.96180319786072
+  },
+  {
+    "config_id": "c01_base",
+    "ok": true,
+    "runtime_s": 58.21049404144287
+  },
+  {
+    "config_id": "c02_DD0.25",
+    "ok": true,
+    "runtime_s": 59.12876796722412
+  },
+  {
+    "config_id": "c00_dd_only",
+    "ok": true,
+    "runtime_s": 76.77531552314758
+  },
+  {
+    "config_id": "c05_S2",
+    "ok": true,
+    "runtime_s": 41.571457862854004
+  },
+  {
+    "config_id": "c04_S0",
+    "ok": true,
+    "runtime_s": 54.841405391693115
+  },
+  {
+    "config_id": "c06_V0",
+    "ok": true,
+    "runtime_s": 53.28560185432434
+  },
+  {
+    "config_id": "c07_V2",
+    "ok": true,
+    "runtime_s": 54.98850607872009
+  },
+  {
+    "config_id": "c08_N0",
+    "ok": true,
+    "runtime_s": 60.07792615890503
+  },
+  {
+    "config_id": "c10_P0",
+    "ok": true,
+    "runtime_s": 55.17263865470886
+  },
+  {
+    "config_id": "c09_N2",
+    "ok": true,
+    "runtime_s": 59.22110557556152
+  },
+  {
+    "config_id": "c11_P2",
+    "ok": true,
+    "runtime_s": 55.607240200042725
+  },
+  {
+    "config_id": "c12_structural_only",
+    "ok": true,
+    "runtime_s": 56.424556493759155
+  },
+  {
+    "config_id": "c14_hinge_hard",
+    "ok": true,
+    "runtime_s": 51.84067487716675
+  },
+  {
+    "config_id": "c13_all_high",
+    "ok": true,
+    "runtime_s": 54.39042782783508
+  },
+  {
+    "config_id": "c15_mean_var",
+    "ok": true,
+    "runtime_s": 50.54561424255371
+  },
+  {
+    "config_id": "c17_dd_heavy",
+    "ok": true,
+    "runtime_s": 52.94210720062256
+  },
+  {
+    "config_id": "c16_size_hinge",
+    "ok": true,
+    "runtime_s": 64.19460773468018
+  }
+]

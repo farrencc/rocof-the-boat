@@ -1,0 +1,6 @@
+{
+  "best_config": "c12_structural_only",
+  "best_grouping": "c12_structural_only:bestE",
+  "rule": "NO best-E grouping had 0 new failures vs WDT on validation; picked lowest mean validation D. See new_security_failures.csv",
+  "new_failures": 1
+}

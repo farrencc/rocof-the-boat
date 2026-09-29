@@ -1,0 +1,18 @@
+[d14_structural_only] E0=0.0000 D0=6.4293  T_start=0.05196 T_end=0.00115 alpha=0.99
+[d14_structural_only] step   25 T=0.04042 E=0.1958 D=6.5999 best E=-0.2092 (D=6.5931) best D=6.2649 acc=10/30 infeas=6 calls=791 sizes=[51, 37, 5, 60, 5, 36, 59, 10, 26, 10]
+[d14_structural_only] step   50 T=0.03144 E=1.1262 D=6.5567 best E=-0.2092 (D=6.5931) best D=6.2649 acc=8/30 infeas=13 calls=1541 sizes=[68, 44, 5, 72, 5, 25, 68, 16, 37, 9]
+[d14_structural_only] step   75 T=0.02445 E=0.5566 D=6.2158 best E=-0.2092 (D=6.5931) best D=5.8020 acc=13/30 infeas=11 calls=2291 sizes=[63, 54, 5, 70, 5, 23, 85, 19, 42, 7]
+[d14_structural_only] step  100 T=0.01902 E=0.4306 D=6.3032 best E=-0.2092 (D=6.5931) best D=5.8020 acc=13/30 infeas=6 calls=3041 sizes=[59, 53, 5, 72, 5, 26, 67, 15, 60, 8]
+[d14_structural_only] step  125 T=0.01479 E=-0.0337 D=6.1937 best E=-0.2092 (D=6.5931) best D=5.8020 acc=10/30 infeas=11 calls=3791 sizes=[52, 53, 5, 71, 6, 34, 56, 14, 49, 8]
+[d14_structural_only] step  150 T=0.01151 E=-0.4300 D=6.0222 best E=-0.4300 (D=6.0222) best D=5.8020 acc=7/30 infeas=14 calls=4541 sizes=[56, 51, 5, 58, 5, 30, 59, 16, 46, 6]
+[d14_structural_only] step  175 T=0.008951 E=-0.8592 D=6.1731 best E=-0.8738 (D=6.1539) best D=5.8020 acc=11/30 infeas=4 calls=5291 sizes=[65, 42, 5, 53, 5, 27, 51, 15, 34, 8]
+[d14_structural_only] step  200 T=0.006962 E=-1.5797 D=6.2769 best E=-1.5969 (D=6.2837) best D=5.5675 acc=9/30 infeas=11 calls=6041 sizes=[51, 46, 5, 58, 5, 25, 43, 14, 29, 8]
+[d14_structural_only] step  225 T=0.005415 E=-1.8023 D=6.2087 best E=-1.8023 (D=6.2087) best D=5.4716 acc=10/30 infeas=10 calls=6791 sizes=[39, 48, 5, 57, 5, 18, 55, 13, 24, 6]
+[d14_structural_only] step  250 T=0.004212 E=-2.2659 D=6.2060 best E=-2.2756 (D=6.2060) best D=5.4716 acc=3/30 infeas=12 calls=7541 sizes=[39, 43, 5, 50, 5, 15, 46, 12, 13, 6]
+[d14_structural_only] step  275 T=0.003276 E=-2.7074 D=6.1418 best E=-2.7074 (D=6.1418) best D=5.4716 acc=4/30 infeas=11 calls=8291 sizes=[34, 44, 5, 46, 5, 15, 39, 13, 5, 5]
+[d14_structural_only] step  300 T=0.002548 E=-3.2186 D=6.1102 best E=-3.2209 (D=6.1100) best D=5.4716 acc=2/30 infeas=14 calls=9041 sizes=[34, 38, 5, 31, 5, 15, 25, 12, 5, 5]
+[d14_structural_only] step  325 T=0.001982 E=-3.4436 D=6.1626 best E=-3.4436 (D=6.1626) best D=5.4716 acc=1/30 infeas=9 calls=9791 sizes=[18, 40, 5, 31, 5, 14, 22, 14, 5, 7]
+[d14_structural_only] step  350 T=0.001542 E=-3.9080 D=5.9346 best E=-3.9080 (D=5.9346) best D=5.4716 acc=3/30 infeas=12 calls=10541 sizes=[5, 33, 5, 27, 5, 18, 20, 17, 5, 5]
+[d14_structural_only] step  375 T=0.001199 E=-4.0351 D=5.8934 best E=-4.0391 (D=5.8937) best D=5.4358 acc=4/30 infeas=3 calls=11291 sizes=[5, 29, 5, 26, 5, 15, 16, 15, 5, 5]
+[d14_structural_only] step  380 T=0.00114 E=-4.1529 D=5.8961 best E=-4.1529 (D=5.8961) best D=5.4336 acc=4/30 infeas=0 calls=11441 sizes=[5, 30, 5, 25, 5, 14, 12, 16, 5, 5]
+[d14_structural_only] done in 309.8s
