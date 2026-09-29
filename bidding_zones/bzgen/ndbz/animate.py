@@ -40,30 +40,28 @@ from bzgen.ndbz.plots import INK, INK2, SERIES, _style
 # plain-language labels
 # --------------------------------------------------------------------------- #
 
-SCENARIO_TEXT = {
-    "baseline": "a normal year (all hours)",
-    "peak_demand": "the hours of highest demand",
-    "dunkelflaute": "cold, dark, windless hours",
-    "wind_surplus": "the windiest hours",
-    "max_dispersion": "the hours with the most uneven prices",
+SCENARIO_TITLE = {
+    "baseline": "Baseline Scenario",
+    "peak_demand": "High Demand Scenario",
+    "dunkelflaute": "Dunkelflaute Scenario",
+    "wind_surplus": "Wind Surplus Scenario",
+    "max_dispersion": "Price Disparity Scenario",
 }
-COUNTRY_NAME = {"IE": "Ireland", "FR": "France", "DE": "Germany", "ES": "Spain", "IT": "Italy",
-                "NO": "Norway", "SE": "Sweden", "PL": "Poland", "PT": "Portugal", "NL": "Netherlands",
-                "BE": "Belgium", "AT": "Austria", "CH": "Switzerland", "DK": "Denmark", "FI": "Finland"}
-
-
-def anchor_word(lam_rigid: float) -> str:
-    """How strongly the map is pulled towards today's zones, in words."""
-    for lim, word in ((0.0, "none"), (0.1, "weak"), (0.3, "light"), (1.0, "moderate"), (3.0, "strong")):
-        if lam_rigid <= lim + 1e-12:
-            return word
-    return "very strong"
+FONT_DIR = Path(__file__).resolve().parents[2] / "assets" / "fonts"
+FONT = "Source Sans 3"             # Adobe; SIL OFL 1.1 (assets/fonts/OFL.md)
 
 
 def headline(c: str, scenario: str, lam_rigid: float) -> tuple[str, str]:
-    title = f"{COUNTRY_NAME.get(c, c)}: zones drawn from {SCENARIO_TEXT.get(scenario, scenario)}"
-    sub = f"Pull towards today's zones: {anchor_word(lam_rigid)} (λ = {lam_rigid:g})"
-    return title, sub
+    return SCENARIO_TITLE.get(scenario, scenario), f"Dynamical Inertia  λ = {lam_rigid:g}"
+
+
+def _font_rc() -> dict:
+    """Register the bundled typeface; fall back to matplotlib's default if absent."""
+    from matplotlib import font_manager
+    files = sorted(FONT_DIR.glob("*.ttf"))
+    for f in files:
+        font_manager.fontManager.addfont(str(f))
+    return {"font.family": FONT} if files else {}
 
 
 # --------------------------------------------------------------------------- #
@@ -146,7 +144,13 @@ def bus_cells(buses: pd.DataFrame, all_buses: list, members: list):
 # rendering
 # --------------------------------------------------------------------------- #
 
-def render(frames: np.ndarray, meta: np.ndarray, nodes: list, host: dict, A: np.ndarray,
+def render(*args, **kwargs) -> dict:
+    """Write ``<out_base>.gif`` (and ``.mp4``) in the bundled typeface; see ``_render``."""
+    with plt.rc_context(_font_rc()):
+        return _render(*args, **kwargs)
+
+
+def _render(frames: np.ndarray, meta: np.ndarray, nodes: list, host: dict, A: np.ndarray,
            zone_ids: list, k: int, buses: pd.DataFrame, lines: pd.DataFrame, members: list,
            title: str, subtitle: str, lam_rigid: float, lam_b: float, out_base: Path, fps: float = 10.0,
            hold_s: float = 1.0, dpi: int = 80, mp4: bool = True) -> dict:
@@ -200,7 +204,7 @@ def render(frames: np.ndarray, meta: np.ndarray, nodes: list, host: dict, A: np.
         ax.set_xticks([]); ax.set_yticks([]); ax.set_xlabel(""); ax.set_ylabel("")
         for s in ax.spines.values():
             s.set_visible(False)
-        ax.set_title(subtitle, fontsize=9, color=INK, loc="left")
+        ax.set_title(subtitle, fontsize=12, color=INK, loc="left")
 
     def canvas(fig):
         fig.canvas.draw()
@@ -210,15 +214,16 @@ def render(frames: np.ndarray, meta: np.ndarray, nodes: list, host: dict, A: np.
     from matplotlib.patches import Patch
 
     def header(fig):
-        fig.text(0.01, 0.955, title, fontsize=13, color=INK, ha="left", va="center")
-        fig.text(0.01, 0.905, subtitle, fontsize=9.5, color=INK2, ha="left", va="center")
+        fig.text(0.012, 0.952, title, fontsize=19, fontweight="bold", color=INK, ha="left",
+                 va="center")
+        fig.text(0.012, 0.895, subtitle, fontsize=13, color=INK2, ha="left", va="center")
 
     def key(fig, x0):
         handles = [Patch(facecolor="white", edgecolor=INK, hatch="////", lw=0.6),
                    Line2D([], [], ls="", marker="o", ms=6, mfc="white", mec=INK, mew=1.6)]
-        fig.legend(handles, ["area of a bus that changed zone", "bus that changed zone"],
+        fig.legend(handles, ["area of a transferred node", "transferred node"],
                    loc="lower left", bbox_to_anchor=(x0, 0.005), ncol=2, frameon=False,
-                   fontsize=7.5, handlelength=1.6, columnspacing=1.2)
+                   fontsize=9, handlelength=1.6, columnspacing=1.2)
 
     images = []
     n_temps = int(np.sum(T[1:] > 0))
@@ -226,33 +231,34 @@ def render(frames: np.ndarray, meta: np.ndarray, nodes: list, host: dict, A: np.
     for f in range(F):
         fig = plt.figure(figsize=(11.0, 6.0), dpi=dpi)
         header(fig)
-        ax = fig.add_axes([0.01, 0.07, 0.50, 0.76])
-        phase = ("Start: random zones" if f == 0 else
-                 f"Searching: step {f} of {n_temps}" if T[f] > 0 else "Final settling")
+        ax = fig.add_axes([0.01, 0.07, 0.50, 0.72])
+        phase = ("Initial state" if f == 0 else
+                 f"Annealing: step {f} of {n_temps}" if T[f] > 0 else "Final settling")
         map_axes(ax, col[f], moved[f], phase)
         key(fig, 0.01)
         a1 = fig.add_axes([0.58, 0.53, 0.40, 0.30])
         a2 = fig.add_axes([0.58, 0.12, 0.40, 0.28])
         for a in (a1, a2):
             _style(a)
-        for y, lab, c in ((potts, "fit to grid congestion", SERIES[0]),
-                          (bal, "zone size balance", SERIES[1]),
-                          (rig, "distance from today's zones", SERIES[2])):
+            a.tick_params(labelsize=9)
+        for y, lab, c in ((potts, "Congestion", SERIES[0]),
+                          (bal, "Zone balance", SERIES[1]),
+                          (rig, "Dynamical inertia", SERIES[2])):
             a1.plot(x, y, color=c, lw=1.6, label=lab)
             a1.plot([f], [y[f]], "o", color=c, ms=5, mec="white", mew=1.0)
         a1.axvline(f, color=INK2, lw=0.7, ls=":")
-        a1.legend(fontsize=7, frameon=False, loc="upper right")
-        a1.set_title("Score being minimised (lower is better)", fontsize=9, color=INK, loc="left")
-        a1.set_ylabel("score", fontsize=7.5, color=INK2)
+        a1.legend(fontsize=9, frameon=False, loc="upper right")
+        a1.set_title("Hamiltonian", fontsize=12, fontweight="semibold", color=INK, loc="left")
         a1.tick_params(labelbottom=False)
         a2.plot(x, td, color=SERIES[0], lw=1.6)
         a2.plot([f], [td[f]], "o", color=SERIES[0], ms=5, mec="white", mew=1.0)
         a2.annotate(f"{td[f]} of {n}", (f, td[f]), xytext=(6, 6), textcoords="offset points",
-                    fontsize=8, color=INK)
+                    fontsize=9.5, color=INK,
+                    bbox=dict(boxstyle="round,pad=0.2", fc="white", ec="none", alpha=0.9))
         a2.axvline(f, color=INK2, lw=0.7, ls=":")
-        a2.set_title("Buses in a different zone from today", fontsize=9, color=INK, loc="left")
-        a2.set_ylabel("buses", fontsize=7.5, color=INK2)
-        a2.set_xlabel("search progress", fontsize=7.5, color=INK2)
+        a2.set_title("Number of transferred nodes", fontsize=12, fontweight="semibold", color=INK,
+                     loc="left")
+        a2.set_xlabel("Annealing progress", fontsize=9.5, color=INK2)
         a2.set_ylim(0, max(int(td.max()) + 2, 4))
         a2.tick_params(labelbottom=False)
         images.append(canvas(fig))
@@ -260,11 +266,11 @@ def render(frames: np.ndarray, meta: np.ndarray, nodes: list, host: dict, A: np.
     # held comparison frame: converged map beside today's
     fig = plt.figure(figsize=(11.0, 6.0), dpi=dpi)
     header(fig)
-    ax1 = fig.add_axes([0.01, 0.07, 0.48, 0.76])
-    ax2 = fig.add_axes([0.51, 0.07, 0.48, 0.76])
-    map_axes(ax1, A, np.zeros_like(A, bool), "Today's zones")
-    res = ("Result: same zones as today" if td[-1] == 0 else
-           f"Result: {td[-1]} of {n} buses change zone")
+    ax1 = fig.add_axes([0.01, 0.07, 0.48, 0.72])
+    ax2 = fig.add_axes([0.51, 0.07, 0.48, 0.72])
+    map_axes(ax1, A, np.zeros_like(A, bool), "Static zones")
+    res = ("Result: no transferred nodes" if td[-1] == 0 else
+           f"Result: {td[-1]} of {n} nodes transferred")
     map_axes(ax2, col[-1], moved[-1], res)
     key(fig, 0.51)
     last = canvas(fig)
