@@ -10,7 +10,8 @@ from cases import build_cases_v2
 def test_v2_reproduces_upstream(seed, ts):
     g = up.load_grid("26")
     a = up.build_cases(g, seed=seed, thermal_scale=ts)
-    b = build_cases_v2(g, seed=seed, thermal_scale=ts, snsp_limit=None, include_conventional=False)
+    b = build_cases_v2(g, seed=seed, thermal_scale=ts, snsp_limit=None, include_conventional=False,
+                       slack="balance")
     for f in ("renewable_potential_mw", "pre_network_dispatch_mw", "pre_network_dispatch_down_mw",
               "case_weights", "state_limits_mw", "state_monitor", "state_outage"):
         np.testing.assert_array_equal(getattr(a, f), getattr(b, f), err_msg=f)

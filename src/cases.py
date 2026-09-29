@@ -18,9 +18,15 @@ frozen cases in our own code, following the same dispatch sequence, and extends 
 4. PTDF (balance bus = largest conventional unit), frozen flows, and upstream's
    LODF and 90% N-1 screen.
 5. **Nodes** = the 174 renewable farms, followed (optionally) by each conventional
-   unit except the balance unit. A node's action is "reduce 1 MW, replaced at the
-   balance bus", so every node has the same sensitivity formula
-   ``H[:, balance] - H[:, bus]``. For a conventional unit the "dispatch" fed to the
+   unit except the balance unit. A node's action is "reduce 1 MW, replaced by the
+   slack". ``slack="balance"`` (upstream) puts the replacement on the balance bus:
+   sensitivity ``H[:, balance] - H[:, bus]``. ``slack="distributed"`` [decision]
+   shares it across every conventional unit in proportion to p_nom (a fixed
+   participation vector a): sensitivity ``H[:, conv] @ a - H[:, bus]``. The
+   distributed slack exists because single-bus replacement exceeded Great
+   Island's 464.5 MW rating in ~45% of snapshots once conventional plant joined
+   groups, and overloaded its exit lines. (A down-regulated unit keeps its own
+   share a_j of the replacement; that is small and ignored.) For a conventional unit the "dispatch" fed to the
    relief loop is its DOWN-ROOM (dispatch - p_min), so pro-rata cuts stop at p_min.
 
 With ``snsp_limit=None, include_conventional=False`` the arrays are identical
@@ -67,6 +73,8 @@ class CasesV2:
     snsp_uncapped: np.ndarray
     snsp_curtail_mw: np.ndarray              # snapshot, renewable MW cut by the cap
     demand_mw: np.ndarray                    # snapshot total
+    replacement_ptdf: np.ndarray             # branch: flow per MW of replacement injection
+    slack: str
 
 
 def conventional_fleet(grid) -> pd.DataFrame:
@@ -85,7 +93,7 @@ def conventional_fleet(grid) -> pd.DataFrame:
 def build_cases_v2(grid, seed: int, thermal_scale: float = 1.0, runs: int = 10_000,
                    snsp_limit: float | None = SNSP_LIMIT, include_conventional: bool = True,
                    security_screen_threshold_pct: float = 90.0, max_security_states: int = 800,
-                   include_n1: bool = True) -> CasesV2:
+                   include_n1: bool = True, slack: str = "distributed") -> CasesV2:
     model, network, extra, nodes = grid.model, grid.network, grid.extra, grid.template
     n_snap = len(network.load_profile)
     n_bus = len(model.bus_ids)
@@ -204,7 +212,14 @@ def build_cases_v2(grid, seed: int, thermal_scale: float = 1.0, runs: int = 10_0
         kinds += [1] * len(keep)
         dispatch_cols.append(np.maximum(0.0, cd[:, keep] - pmin[keep][None, :]))
     node_bus_idx = np.array(node_bus_idx)
-    bns = H[:, bal][None, :] - H[:, node_bus_idx].T         # node x branch
+    if slack == "balance":
+        repl = H[:, bal]
+    elif slack == "distributed":
+        part = pmax / pmax.sum()
+        repl = H[:, conv_bus] @ part
+    else:
+        raise ValueError(slack)
+    bns = repl[None, :] - H[:, node_bus_idx].T              # node x branch
     nss = bns[:, mon].copy()
     if has_out.any():
         nss[:, has_out] += bns[:, out[has_out]] * coeff[has_out][None, :]
@@ -221,6 +236,7 @@ def build_cases_v2(grid, seed: int, thermal_scale: float = 1.0, runs: int = 10_0
         shortage_mw=shortage, node_kind=np.array(kinds), node_bus=np.array(model.bus_ids)[node_bus_idx],
         conv_table=conv_nodes.reset_index(drop=True), conv_dispatch_mw=cd, snsp=snsp,
         snsp_uncapped=snsp_uncapped, snsp_curtail_mw=snsp_cut, demand_mw=tot_dem,
+        replacement_ptdf=repl, slack=slack,
     )
 
 
