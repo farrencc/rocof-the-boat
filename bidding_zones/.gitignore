@@ -7,3 +7,5 @@ data/interim/
 .pytest_cache/
 logs/
 data/validate/
+weather/
+weather_*.zip
