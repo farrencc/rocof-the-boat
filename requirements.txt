@@ -1,0 +1,20 @@
+# Top-level dependencies, pinned. Full resolved set: requirements-lock.txt
+pypsa==1.3.0
+linopy==0.9.1
+highspy==1.15.1
+pandas==3.0.6
+numpy==2.4.6
+scipy==1.17.1
+xarray==2026.7.0
+geopandas==1.2.0
+shapely==2.1.2
+pyproj==3.7.2
+networkx==3.6.1
+numba==0.67.0
+matplotlib==3.11.2
+PyYAML==6.0.3
+requests==2.34.2
+pyarrow==25.0.1
+scikit-learn==1.9.1
+powerplantmatching==0.8.0
+pytest==9.1.1

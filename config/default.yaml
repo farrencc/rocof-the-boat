@@ -1,0 +1,78 @@
+# Default parameter set for the Potts-model bidding-zone PoC.
+# Every tunable lives here; code reads it via src/config.py.
+
+target_year: 2025
+weather_year: 2019        # load shape + ERA5 weather year (latest full pre-COVID OPSD year)
+
+scope:
+  # EU27 + NO + CH + Western Balkans; GB excluded (NI too, see PLAN.md §1).
+  countries: [AT, BE, BG, HR, CY, CZ, DK, EE, FI, FR, DE, GR, HU, IE, IT, LV, LT, LU,
+              MT, NL, PL, PT, RO, SK, SI, ES, SE, NO, CH, AL, BA, ME, MK, RS, XK]
+  exclude: [GB]
+  # Merged into the neighbour with the largest cross-border susceptance.
+  merge_always: [LU, ME, LI, AD, MC, SM, VA]
+  min_buses: 5            # any country with fewer buses after simplification is merged too
+
+sources:
+  osm_zenodo_record: 18619025   # PyPSA-Eur data/versions.csv: osm v0.7 (primary)
+  osm_files: [buses.csv, lines.csv, links.csv, converters.csv, transformers.csv]
+  nuts_geojson: https://gisco-services.ec.europa.eu/distribution/v2/nuts/geojson/NUTS_RG_01M_2021_4326_LEVL_3.geojson
+  nuts0_geojson: https://gisco-services.ec.europa.eu/distribution/v2/nuts/geojson/NUTS_RG_10M_2021_4326_LEVL_0.geojson
+  countries_geojson: https://gisco-services.ec.europa.eu/distribution/v2/countries/geojson/CNTR_RG_10M_2020_4326.geojson
+  eurostat_api: https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data
+  opsd_timeseries: https://data.open-power-system-data.org/time_series/latest/time_series_60min_singleindex.csv
+  open_meteo_archive: https://archive-api.open-meteo.com/v1/archive
+
+network:
+  v_ref_kv: 380
+  s_max_pu: 0.7           # PyPSA-Eur default N-1 proxy
+  drop_under_construction: true
+
+demand:
+  w_pop: 0.6              # PyPSA-Eur build_electricity_demand_base default split (INFERENCE: check)
+  w_gdp: 0.4
+
+weather:
+  grid_deg: 1.0
+  max_dist_deg: 0.75      # keep a grid point only if a bus lies within this distance
+  pause_s: 1.5
+  wind:
+    cut_in: 3.0
+    rated: 12.0
+    cut_out: 25.0
+    losses: 0.10          # flat wake + availability loss
+  pv:
+    performance_ratio: 0.85
+
+solve:
+  n_snapshots: 300        # k-medoids representative hours; weight = cluster size
+  batch_hours: 24
+  workers: 4
+  load_shedding_cost: 3000.0
+  cost_noise: 0.01        # EUR/MWh seeded random perturbation to break ties
+  degeneracy_sample: 40   # snapshots re-solved with a second noise seed
+  degeneracy_tol: 0.5     # EUR/MWh
+  shedding_policy: exclude  # exclude | clip
+
+edges:
+  statistic: duration     # duration | mean | quantile
+  duration_threshold: 1.0 # EUR/MWh
+  quantile: 0.9
+  dc_in_energy: true      # HVDC edges enter H with their dp and J = 0
+
+spectrum:
+  k_max: 12
+  gap_ratio: 1.5
+  k_fallback: 3
+
+anneal:
+  alpha: 1.0
+  lambda_c_final: 5.0
+  lambda_c_initial: 0.1
+  lambda_b: 0.5
+  balance_floor: 0.05
+  restarts: 8
+  sweeps_per_temp: 20     # in units of the number of nodes
+  n_temps: 60
+  t_final_ratio: 0.001
+  seed: 12345
