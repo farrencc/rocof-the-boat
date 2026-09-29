@@ -59,9 +59,19 @@ def choose_k(ev: np.ndarray, k_max: int, gap_ratio: float, k_fallback: int, n: i
         sig[k] = gaps[k - 1] / med if med > 0 else np.inf
     k_star = max(sig, key=sig.get)
     k_big = int(np.argmax(gaps[1:k_max]) + 2)
-    conv = bool(sig[k_star] >= gap_ratio)
+    # Null: Poisson (exponential) level spacing, for which P(g > s * median) = 2^-s.
+    # Family-wise (Bonferroni) over the m candidate gaps: p = min(1, m 2^-s).
+    # gap_ratio is the family-wise alpha when < 1, else a fixed significance threshold.
+    m = len(sig)
+    pval = float(min(1.0, m * 2.0 ** (-sig[k_star]))) if np.isfinite(sig[k_star]) else 0.0
+    if gap_ratio < 1:
+        thr = float(np.log2(m / gap_ratio))
+    else:
+        thr = gap_ratio
+    conv = bool(sig[k_star] >= thr)
     k_used = k_star if conv else int(max(2, min(k_fallback, k_max)))
     return {"k_elbow": int(k_star), "gap": float(gaps[k_star - 1]), "significance": float(sig[k_star]),
+            "threshold": thr, "p_poisson_fwer": pval,
             "convincing": conv, "k_used": k_used, "k_largest_gap": k_big,
             "gap_k1": float(gaps[0]), "lambda2": float(ev[1]),
-            "note": "eigengap" if conv else f"FALLBACK k={k_used}: no gap >= {gap_ratio}x local spacing"}
+            "note": "eigengap" if conv else f"FALLBACK k={k_used}: no gap >= {thr:.1f}x local spacing"}

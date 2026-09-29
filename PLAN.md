@@ -232,7 +232,16 @@ short status message in chat. Existing `IzzyMatt/` content is not touched.
     states are contiguous by construction. λ_c,initial is what the sweep varies.
     Validated on planted partitions (reports/annealer_validation.md).
   - **Eigengap**: the plain largest gap is biased to k_max on near-planar graphs; the
-    elbow now uses gap / median(neighbouring gaps), and k ≤ max(2, n/4).
+    elbow now uses gap / median(neighbouring gaps), and k ≤ max(2, n/4). A fixed
+    threshold (3×) proved meaningless (exceeded by chance ~3/4 of the time under a
+    Poisson-spacing null; it proposed 12 zones for AT); the test is now family-wise
+    α = 0.05 against that null. **No country passes** (min p = 0.10, SI): every k is the
+    documented fallback (3; 2 where n is small).
+  - **Wind**: raw ERA5 onshore CFs are far below Eurostat-observed 2019 CFs in most
+    countries (e.g. RO 0.07 vs 0.26, IT 0.11 vs 0.22); a per-country onshore speed scale
+    calibrates the level (reports/data.md), keeping ERA5's spatial and temporal pattern.
+  - **Gate** (reports/normalisation.md): duration statistic kept; J → log1p (raw skew
+    up to 10.7); Δp̃ clipped at q99; EE has no congestion signal.
   - **Energy sign structure** (dev finding, to be confirmed on real data): with J̃
     strongly skewed, most edges have w = Δp̃ − αJ̃ > 0 at α = 1, so the Potts model is
     antiferromagnetic on most edges and minimisers are contiguous but interdigitated. The

@@ -76,7 +76,7 @@ edges:
 
 spectrum:
   k_max: 12
-  gap_ratio: 3.0         # a gap must be >= 3x the median of its neighbouring gaps
+  gap_ratio: 0.05        # <1: family-wise alpha vs a Poisson-spacing null (threshold log2(m/alpha)); >=1: fixed ratio
   k_fallback: 3
 
 anneal:

@@ -63,13 +63,13 @@ def plot(spectra, df, sc):
                 k = int(r.k_elbow)
                 ax.axvline(k + 0.5, color="C3" if r.convincing else "C1", lw=1,
                            ls="-" if r.convincing else "--")
-            ax.set_title(f"{c} n={int(r.n_nodes)} k*={r.k_elbow} s={r.significance:.1f} "
+            ax.set_title(f"{c} n={int(r.n_nodes)} k*={r.k_elbow} s={r.significance:.1f} p={r.p_poisson_fwer:.2f} "
                          f"{'✓' if r.convincing else '✗'}", fontsize=7)
             ax.tick_params(labelsize=6)
         for ax in axes.ravel()[len(cs):]:
             ax.axis("off")
         fig.suptitle(f"Normalised-Laplacian spectra ({kind}); line = most significant eigengap, "
-                     f"2≤k≤{sc['k_max']} (solid red: ≥{sc['gap_ratio']}× local spacing; dashed orange: not)",
+                     f"2≤k≤{sc['k_max']} (solid red: passes the Poisson-null test at α={sc['gap_ratio']}; dashed orange: not)",
                      fontsize=9)
         fig.tight_layout()
         fig.savefig(FIGS / f"spectra_{kind}.png", dpi=150)
@@ -87,7 +87,12 @@ def report(df, sc):
         f"{sc['k_max']}, the gap λ_(k+1) − λ_k divided by the median of its neighbouring gaps",
         "(±3 indices). The plain largest gap is biased to k_max on near-planar graphs, whose",
         "spacing grows with index, so it is reported (`k_largest_gap`) but not used. *Convincing*",
-        f"if the local significance is ≥ {sc['gap_ratio']}; otherwise the documented fallback",
+        "if the local significance s exceeds a null threshold: for Poisson (exponential) level",
+        "spacing P(gap > s·median) = 2^-s, so with m candidate gaps a family-wise",
+        f"α = {sc['gap_ratio']} test needs s ≥ log2(m/α) (≈ 7.8 for m = 11); `p_poisson_fwer` =",
+        "min(1, m·2^-s). (A fixed threshold s ≥ 3 was tried first: under this null it is exceeded",
+        "somewhere in 2..12 about 3/4 of the time by chance, and it 'found' 12 zones in Austria.)",
+        "Otherwise the documented fallback",
         f"k = {sc['k_fallback']} is used. The search is capped at k ≤ max(2, n/4) (at least ~4",
         "buses per zone): on small graphs a 'gap' near k ≈ n is not a zoning signal.",
         "",
