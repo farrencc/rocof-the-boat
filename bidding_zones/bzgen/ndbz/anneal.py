@@ -339,9 +339,9 @@ def _run_ndbz(labels, k, ptr, idx, w, Lnode, Gnode, Ltot, floor, lam_b, lam_c_sc
     included in the cheap lower bound (it can be negative) and in the Metropolis dE,
     tables updated on acceptance, total re-synchronised after fragment moves;
     (2) frame capture: when ``capture``, ``labels`` and ``frame_meta`` (T, lambda_c,
-    Potts, contiguity excess, balance, H_rigid, acceptance rate) are written at the
-    end of every temperature step, every ``quench_stride`` steps of the quench and
-    once at the very end.  No extra random numbers are drawn.
+    Potts, contiguity excess, balance, H_rigid, acceptance rate) are written for the
+    initial state, at the end of every temperature step, every ``quench_stride``
+    steps of the quench and once at the very end.  No extra random numbers are drawn.
     (3) when ``blocks`` and lambda_rigid > 0: ``block_pass_ndbz`` once per
     temperature step, after the fragment pass (draws random numbers, so only there).
     trace columns: T, lambda_c, E, csum, single-flip acceptance, H_rigid, cumulative
@@ -387,6 +387,10 @@ def _run_ndbz(labels, k, ptr, idx, w, Lnode, Gnode, Ltot, floor, lam_b, lam_c_sc
     nT = T_sched.shape[0]
     trace = np.zeros((nT + 1, 7))
     nf = 0
+    if capture:                                   # frame 0: the initial (graph-Voronoi) state
+        _capture(frames, frame_meta, nf, labels, T_sched[0], lam_c_sched[0], ep, csum, pb,
+                 er / Z, 0.0)
+        nf += 1
     acc_total = 0
     for ti in range(nT + 1):
         if ti < nT:
@@ -585,9 +589,9 @@ def country_seed(c: str, base_seed: int, offset: int, restart: int) -> int:
 
 
 def n_frames(n_temps: int, quench_steps: int, quench_stride: int) -> int:
-    """Frames written by ``_run_ndbz``: one per temperature, one every ``quench_stride``
-    quench steps (strictly inside the quench), one at the end."""
-    return n_temps + max(quench_steps - 1, 0) // quench_stride + 1
+    """Frames written by ``_run_ndbz``: the initial state, one per temperature, one every
+    ``quench_stride`` quench steps (strictly inside the quench), one at the end."""
+    return 1 + n_temps + max(quench_steps - 1, 0) // quench_stride + 1
 
 
 def anneal_ndbz(g: CountryGraph, k: int, A: np.ndarray, cap: np.ndarray, Z: float,

@@ -718,10 +718,14 @@ def test_frames():
         stride = on["quench_stride"]
         assert stride == max(1, qsteps // 7)
         assert on["frames"].shape == (NA.n_frames(SCHED["n_temps"], qsteps, stride), g.n)
-        assert on["frames"].shape[0] == SCHED["n_temps"] + (qsteps - 1) // stride + 1
+        assert on["frames"].shape[0] == 1 + SCHED["n_temps"] + (qsteps - 1) // stride + 1
         # per-temperature frames carry the trace's temperature and rigidity
-        np.testing.assert_array_equal(on["frame_meta"][:SCHED["n_temps"], 0], on["trace"][:-1, 0])
-        np.testing.assert_allclose(on["frame_meta"][:SCHED["n_temps"], 5], on["trace"][:-1, 5])
+        nt = SCHED["n_temps"]
+        np.testing.assert_array_equal(on["frame_meta"][1:nt + 1, 0], on["trace"][:-1, 0])
+        np.testing.assert_allclose(on["frame_meta"][1:nt + 1, 5], on["trace"][:-1, 5])
+        # frame 0 is the graph-Voronoi initial state, never A
+        init = graph_voronoi(g, k, np.random.default_rng(9))
+        np.testing.assert_array_equal(on["frames"][0], init)
         assert on["frame_meta"][-1, 5] == pytest.approx(on["rigid"])
         # every frame is a valid labelling with no empty zone
         assert all(np.bincount(f, minlength=k).min() >= 1 for f in on["frames"])
@@ -792,3 +796,52 @@ def test_T0_in_band_for_every_country_and_scenario(ctx):
                 T = NA.initial_temperature_ndbz(g, lab, anc.k, ctx.params["lambda_b"], floor,
                                                 np.random.default_rng(1), anc.A, anc.cap, lr / anc.Z)
                 assert np.isfinite(T) and lo < T < hi, (sc, c, lr, T)
+
+
+# --------------------------------------------------------------------------- #
+# test 13: animation colours
+# --------------------------------------------------------------------------- #
+
+from bzgen.ndbz import animate as AM
+
+
+def test_colours_stable_for_identical_partitions():
+    rng = np.random.default_rng(21)
+    n, k = 80, 4
+    A = rng.integers(0, k, n)
+    frames = []
+    cur = rng.integers(0, k, n)
+    for t in range(40):
+        if t % 3 == 0:                                  # a real change every third frame
+            i = rng.integers(n)
+            cur = cur.copy()
+            cur[i] = rng.integers(k)
+        perm = rng.permutation(k)                       # label indices permute freely
+        frames.append(perm[cur])
+    frames = np.array(frames)
+    col = AM.colour_sequence(frames, A, k)
+    for f in range(1, len(frames)):
+        same = AM.contingency(frames[f], frames[f - 1], k)
+        if (same > 0).sum(axis=1).max() == 1 and (same > 0).sum(axis=0).max() == 1:
+            # identical partitions (up to label permutation): identical colours
+            np.testing.assert_array_equal(col[f], col[f - 1])
+    np.testing.assert_array_equal(AM.match_colours(A, A, k), A)
+    np.testing.assert_array_equal(AM.match_colours(np.array([2, 0, 3, 1])[A], A, k), A)
+
+
+def test_colour_ties_follow_previous_frame():
+    # B splits every A-zone evenly: every assignment ties on overlap; the previous
+    # frame's colours decide, so the colouring does not flip between frames
+    A = np.array([0, 0, 1, 1])
+    B1 = np.array([0, 1, 0, 1])
+    prev = AM.match_colours(B1, A, 2)
+    for _ in range(5):
+        permuted = np.array([1, 0])[B1]
+        np.testing.assert_array_equal(AM.match_colours(permuted, A, 2, prev), prev)
+
+
+def test_transfer_distance():
+    A = np.array([0, 0, 0, 1, 1, 2, 2, 2])
+    assert AM.transfer_distance(A, A, 3) == 0
+    assert AM.transfer_distance(np.array([1, 1, 1, 2, 2, 0, 0, 0]), A, 3) == 0     # relabelled
+    assert AM.transfer_distance(np.array([0, 0, 1, 1, 1, 2, 2, 2]), A, 3) == 1

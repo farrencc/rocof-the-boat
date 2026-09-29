@@ -44,3 +44,12 @@ anneal:
 rigidity:
   lambda: [0.1, 0.3, 1.0, 3.0, 10.0]
   seed_offset: 10000        # restart r of a cell uses the static seed formula + seed_offset + r
+
+animate:
+  enabled: false            # opt-in: the production sweep pays nothing for frame capture
+  restart: best             # which restart to animate: best (re-run with capture, bit-identical) or an index
+  fps: 10
+  hold_s: 1.0               # the last frames are held this long
+  quench_frames: 20         # frames captured through the T = 0 quench
+  dpi: 72
+  mp4: true                 # also write .mp4 (needs imageio-ffmpeg)
