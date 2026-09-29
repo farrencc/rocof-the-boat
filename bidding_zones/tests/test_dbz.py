@@ -427,3 +427,89 @@ def test_T0_dbz_reduces_to_exclude_contiguity():
     assert t0 == ref
     t10 = DA.initial_temperature_dbz(g, lab, K, 0.5, 0.02, np.random.default_rng(1), A, K, 10.0)
     assert np.isfinite(t10) and t10 != ref
+
+
+# --------------------------------------------------------------------------- #
+# 2. static reproduction
+# --------------------------------------------------------------------------- #
+
+need_solved = pytest.mark.skipif(
+    not (DBZ_EDGES.exists() and (ROOT / "data" / "solved" / "gen_mean.csv").exists()),
+    reason="results/dbz/edges.parquet or data/solved not built")
+
+
+@need_solved
+@pytest.mark.parametrize("country", ["HU", "SK"])
+def test_static_reproduction(cfg, country):
+    """European graph restricted to one country's nodes and intra-country edges is the
+    static country graph, and the static annealer on it reproduces results/sweep.csv."""
+    from bzgen.cluster import graphs
+    from bzgen.cluster.anneal import anneal
+    from bzgen.cluster.sweep import node_attributes
+    cid = cfg["dbz"]["anchor_config_id"]
+    buses = pd.read_csv(INTERIM / "buses.csv", index_col=0)
+    en = pd.read_parquet(DBZ_EDGES)
+    L, G = node_attributes(cfg)
+    ref = pd.read_csv(ROOT / "results" / "sweep.csv")
+    ref = ref[(ref.config_id == cid) & (ref.country == country)].iloc[0]
+    if ref.n_isolated_attached:
+        pytest.skip("country has isolated buses: node sets differ by construction")
+    nodes, _ = graphs.country_nodes(country, buses, en[~en.is_cross])
+    intra = en[~en.is_cross]
+    gE, nodesE, _ = DG.build(buses, intra, ref.alpha, L, G, pd.Series(1.0, index=buses.index),
+                             int(ref.k), nodes=nodes)
+    gS, nodesS, host, _ = graphs.build(country, buses, pd.read_parquet(STATIC_EDGES), ref.alpha,
+                                       L, G, cfg["edges"]["dc_in_energy"])
+    assert nodesE == nodesS and not host
+    np.testing.assert_array_equal(gE.ptr, gS.ptr)
+    np.testing.assert_array_equal(gE.idx, gS.idx)
+    np.testing.assert_array_equal(gE.w, gS.w)
+    np.testing.assert_array_equal(gE.Lnode, gS.Lnode)
+    a = cfg["anneal"]
+    E = [anneal(gE, int(ref.k), lam_b=ref.lambda_b, lam_c0=ref.lambda_c_initial,
+                lam_c1=a["lambda_c_final"], floor=a["balance_floor"], n_temps=a["n_temps"],
+                sweeps_per_temp=50, t_final_ratio=a["t_final_ratio"], seed=s,
+                quench_sweeps=a["quench_sweeps"])["energy"] for s in range(6)]
+    # within the restart spread: the static run's own spread bounds every restart, and the
+    # median lies inside the static [E_min, E_max]; a restart below the static E_min
+    # (the static best missed a lower minimum, e.g. SK) or above E_max (an outlier
+    # restart) is allowed within one spread
+    tol = 1e-6 * max(1.0, abs(ref.E_min))
+    lo, hi = ref.E_min - ref.E_spread - tol, ref.E_max + ref.E_spread + tol
+    assert all(lo <= e <= hi for e in E), (E, ref.E_min, ref.E_max)
+    assert ref.E_min - tol <= float(np.median(E)) <= ref.E_max + tol, (E, ref.E_min, ref.E_max)
+
+
+# --------------------------------------------------------------------------- #
+# 9. resume after an interruption
+# --------------------------------------------------------------------------- #
+
+@need_solved
+def test_resume_after_interrupt(tmp_path):
+    import json
+    import os
+    import subprocess
+    import sys
+    out = tmp_path / "dbz"
+    cmd = [sys.executable, "-m", "bzgen.dbz.sweep", "--smoke", "--no-figures", "--no-git",
+           "--out", str(out), "--lambdas", "0", "1", "3"]
+    env = dict(os.environ, DBZ_ABORT_AT="1")
+    r = subprocess.run(cmd, cwd=ROOT, env=env, capture_output=True, text=True)
+    assert r.returncode == 3, r.stderr[-2000:]            # died mid-checkpoint at lambda = 1
+    assert (out / "lr0" / "done.json").exists()
+    assert (out / "lr1" / "labels.csv").exists() and not (out / "lr1" / "done.json").exists()
+    assert not list(out.rglob(".*.tmp")), "atomic writes left a temp file behind"
+    snap = {p.name: p.read_bytes() for p in (out / "lr0").iterdir()}
+    table = pd.read_csv(out / "sweep.csv")
+    assert table.lambda_rigid.tolist() == [0.0]           # only completed lambda listed
+    r = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr[-2000:]
+    assert "skip lr0 (done)" in r.stdout
+    assert {p.name: p.read_bytes() for p in (out / "lr0").iterdir()} == snap   # untouched
+    for lam in ("lr1", "lr3"):
+        assert (out / lam / "done.json").exists()
+        assert json.loads((out / lam / "done.json").read_text())["schedule"]["restarts"] == 2
+    table = pd.read_csv(out / "sweep.csv")
+    assert table.lambda_rigid.tolist() == [0.0, 1.0, 3.0]
+    lab = pd.read_csv(out / "lr1" / "labels.csv")
+    assert len(lab) == 3771 and lab.zone.nunique() == 90
