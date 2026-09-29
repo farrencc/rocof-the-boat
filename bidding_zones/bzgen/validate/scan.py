@@ -15,6 +15,7 @@ even weeks), not a result.
 from __future__ import annotations
 
 import argparse
+import json
 import re
 
 import matplotlib
@@ -97,3 +98,70 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+def derating_panel(df: pd.DataFrame, der: float, tag: str) -> pd.DataFrame:
+    """Figure + table at one derating: dDD by alpha (scan) and its two components, with the
+    out-of-sample point for the headline alpha (results/validate.csv) where it exists."""
+    d = df[np.isclose(df.derating, der)].sort_values("alpha").copy()
+    d["dDD_pct"] = 100 * d.dDD_RES_GWh / d.DD_k1_GWh
+    oos = None
+    f = ROOT / "results" / "validate.csv"
+    if f.exists():
+        r = pd.read_csv(f)
+        r = r[(r.scoring == "oos_even") & np.isclose(r.derating, der) & (r["map"] == "oos_headline")]
+        if len(r):
+            cfg = config.load()
+            p = json.loads((ROOT / "results" / "configs" / cfg["sweep"]["headline"] / "done.json")
+                           .read_text())["params"]
+            oos = dict(alpha=p["alpha"], **r.iloc[0][["dDD_RES_GWh", "dDD_RES_lo", "dDD_RES_hi"]].to_dict())
+    x = np.arange(len(d))
+    lab = [f"{a:g}" for a in d.alpha]
+    fig, axes = plt.subplots(1, 2, figsize=(10.5, 4.6))
+    ax = axes[0]
+    ax.bar(x, d.dDD_RES_GWh / 1e3, 0.6, color="#2a78d6", edgecolor="white",
+           label="scan: in-sample map, 200 representative hours")
+    for xi, v, pc in zip(x, d.dDD_RES_GWh / 1e3, d.dDD_pct):
+        ax.text(xi, v + (0.05 if v >= 0 else -0.05), f"{v:+.2f}\n({pc:+.0f}%)", ha="center",
+                va="bottom" if v >= 0 else "top", fontsize=7, color="#0b0b0b")
+    if oos is not None and oos["alpha"] in list(d.alpha):
+        i = list(d.alpha).index(oos["alpha"])
+        ax.errorbar(i + 0.38, oos["dDD_RES_GWh"] / 1e3,
+                    yerr=[[(oos["dDD_RES_GWh"] - oos["dDD_RES_lo"]) / 1e3],
+                          [(oos["dDD_RES_hi"] - oos["dDD_RES_GWh"]) / 1e3]],
+                    fmt="o", color="#eb6834", ms=6, capsize=3, lw=2,
+                    label="out-of-sample check (refit map, held-out weeks, 95% CI)")
+    ax.axhline(0, color="#52514e", lw=1)
+    ax.set_xticks(x, lab)
+    ax.set_xlabel("coupling α", fontsize=8)
+    ax.set_ylabel("ΔDD_RES, DE split − DE = 1 zone (TWh/yr)", fontsize=8)
+    ax.set_title(f"Dispatch-down change at derating {der:g} (below 0 = split reduces DD)", fontsize=9)
+    lo, hi = ax.get_ylim()
+    ax.set_ylim(lo - 0.25 * (hi - lo), hi + 0.1 * (hi - lo))
+    ax.legend(fontsize=7, frameon=False, loc="upper center", bbox_to_anchor=(0.5, -0.16), ncol=1)
+    ax = axes[1]
+    sp, rd = d.dSpill_market_GWh.to_numpy() / 1e3, d.dRedispatch_down_res_GWh.to_numpy() / 1e3
+    ax.bar(x, sp, 0.6, color="#eb6834", edgecolor="white", label="market curtailment")
+    ax.bar(x, rd, 0.6, color="#1baf7a", edgecolor="white", label="redispatch down")
+    ax.plot(x, sp + rd, "o", color="#0b0b0b", ms=5, label="net ΔDD")
+    ax.axhline(0, color="#52514e", lw=1)
+    ax.set_xticks(x, lab)
+    ax.set_xlabel("coupling α", fontsize=8)
+    ax.set_ylabel("change vs DE = 1 zone (TWh/yr)", fontsize=8)
+    ax.set_title("Where the change comes from", fontsize=9)
+    ax.legend(fontsize=7, frameon=False, loc="upper center", bbox_to_anchor=(0.5, -0.16), ncol=3)
+    for a in axes:
+        for s in ("top", "right"):
+            a.spines[s].set_visible(False)
+        a.grid(axis="y", color="#e6e5e0", lw=0.6)
+        a.set_axisbelow(True)
+        a.tick_params(labelsize=8)
+    fig.suptitle(f"EXPLORATORY scan ({tag}); the out-of-sample check is the test", fontsize=8,
+                 color="#52514e")
+    fig.tight_layout()
+    fig.savefig(ROOT / "figures" / "validate" / f"scan_{tag}_d{der:g}.png", dpi=150)
+    plt.close(fig)
+    t = d[["alpha", "DD_k1_GWh", "DD_split_GWh", "dDD_RES_GWh", "dDD_pct", "dSpill_market_GWh",
+           "dRedispatch_down_res_GWh", "dDD_RES_TH_GWh", "dNP_slack_focus_GWh", "dCost_total_EUR"]]
+    t.to_csv(ROOT / "results" / "validate" / f"scan_{tag}_d{der:g}.csv", index=False)
+    return t, oos

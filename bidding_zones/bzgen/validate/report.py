@@ -436,7 +436,7 @@ def markdown(cfg, sn, tag, maps, rows, deltas, checks, bnd, nodal_meta, pocket, 
               "![map](../figures/validate/dd_map_de.png)", ""]
         if isinstance(vals, str):
             L += [f"_{vals}_", ""]
-        k1 = rows[(rows.map == "k1") & (rows.scoring == rows.scoring.iloc[0])]
+        k1 = rows[(rows["map"] == "k1") & (rows.scoring == rows.scoring.iloc[0])]
         L += ["### k = 1 redispatch volume versus BNetzA", "",
               md(k1.set_index("derating")[["redispatch_up_focus_GWh", "redispatch_down_focus_GWh",
                                            "DD_RES_GWh"]].assign(
