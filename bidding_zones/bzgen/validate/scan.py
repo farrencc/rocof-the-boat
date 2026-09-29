@@ -20,6 +20,8 @@ import re
 import textwrap
 
 import matplotlib
+import matplotlib.patches
+import matplotlib.ticker
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
@@ -178,18 +180,29 @@ def _clean(ax):
     ax.tick_params(labelsize=9, colors="#52514e")
 
 
+def _tint(hex_color: str, a: float) -> str:
+    """Colour as drawn at opacity ``a`` on white (how the zone maps render bzgen.plot.maps.PALETTE)."""
+    rgb = np.array(matplotlib.colors.to_rgb(hex_color))
+    return matplotlib.colors.to_hex(a * rgb + (1 - a) * 1.0)
+
+
+# the EU-wide zone maps' palette (bzgen.plot.maps.PALETTE at map opacity): blue, sandy, green
+_A = 0.65
+BLUE, SAND, GREEN = (_tint(c, _A) for c in ("#4e79a7", "#f28e2b", "#59a14f"))
+XLABEL = "Connectivity coupling α"
+
+
 def readable_panels(df: pd.DataFrame, der: float, tag: str) -> list:
-    """The derating panel as two short, stand-alone figures."""
+    """The derating panel as two short, stand-alone figures (no footnotes)."""
     d = df[np.isclose(df.derating, der)].sort_values("alpha").copy()
     d["pct"] = 100 * d.dDD_RES_GWh / d.DD_k1_GWh
     x = np.arange(len(d))
     lab = [f"{a:g}" for a in d.alpha]
-    note = f"Zone trading capacity {der:.0%} of line capacity. 3 zones. 200 sample hours."
     out = []
 
-    fig, ax = plt.subplots(figsize=(6.4, 4.2))
+    fig, ax = plt.subplots(figsize=(6.4, 4.0))
     v = d.dDD_RES_GWh.to_numpy() / 1e3
-    ax.bar(x, v, 0.6, color="#2a78d6", edgecolor="white")
+    ax.bar(x, v, 0.6, color=BLUE, edgecolor="white")
     for xi, vi, pc in zip(x, v, d.pct):
         ax.text(xi, vi + (0.05 if vi >= 0 else -0.05), f"{vi:+.1f} TWh\n({pc:+.0f}%)", ha="center",
                 va="bottom" if vi >= 0 else "top", fontsize=8, color="#0b0b0b")
@@ -197,34 +210,68 @@ def readable_panels(df: pd.DataFrame, der: float, tag: str) -> list:
     lo, hi = ax.get_ylim()
     ax.set_ylim(lo - 0.15 * (hi - lo), hi + 0.12 * (hi - lo))
     ax.set_xticks(x, lab)
-    ax.set_xlabel("Coupling α", fontsize=9, color="#52514e")
-    ax.set_ylabel("Change in curtailed wind + solar (TWh/yr)", fontsize=9, color="#52514e")
-    ax.set_title("Splitting DE vs one zone (below 0 = less curtailment)", fontsize=10,
+    ax.set_xlabel(XLABEL, fontsize=9, color="#52514e")
+    ax.set_ylabel("Change in wind + solar dispatch down (TWh/yr)", fontsize=9, color="#52514e")
+    ax.set_title("Split DE vs one zone (below 0 = less dispatch down)", fontsize=10,
                  color="#0b0b0b", loc="left")
     _clean(ax)
-    fig.text(0.01, 0.01, note, fontsize=7.5, color="#52514e", va="bottom")
-    fig.tight_layout(rect=(0, 0.04, 1, 1))
+    fig.tight_layout()
     f1 = ROOT / "figures" / "validate" / f"readable_dd_change_d{der:g}.png"
     fig.savefig(f1, dpi=150)
     plt.close(fig)
     out.append(f1)
 
-    fig, ax = plt.subplots(figsize=(6.4, 4.2))
+    fig, ax = plt.subplots(figsize=(6.4, 4.0))
     sp, rd = d.dSpill_market_GWh.to_numpy() / 1e3, d.dRedispatch_down_res_GWh.to_numpy() / 1e3
-    ax.bar(x, sp, 0.6, color="#eb6834", edgecolor="white", label="Market curtailment")
-    ax.bar(x, rd, 0.6, color="#1baf7a", edgecolor="white", label="Redispatch down")
-    ax.plot(x, sp + rd, "o", color="#0b0b0b", ms=6, label="Net change")
+    ax.bar(x, sp, 0.6, color=SAND, edgecolor="white", label="Market dispatch down")
+    ax.bar(x, rd, 0.6, color=GREEN, edgecolor="white", label="Redispatch dispatch down")
+    ax.plot(x, sp + rd, "o", color="#2e4a6b", ms=6, label="Net change")
     ax.axhline(0, color="#52514e", lw=1)
+    ax.yaxis.set_major_formatter(matplotlib.ticker.FormatStrFormatter("%+.1f"))
     ax.set_xticks(x, lab)
-    ax.set_xlabel("Coupling α", fontsize=9, color="#52514e")
-    ax.set_ylabel("Change vs one zone (TWh/yr)", fontsize=9, color="#52514e")
+    ax.set_xlabel(XLABEL, fontsize=9, color="#52514e")
+    ax.set_ylabel("Change in wind + solar dispatch down (TWh/yr)", fontsize=9, color="#52514e")
     ax.set_title("Where the change comes from", fontsize=10, color="#0b0b0b", loc="left")
     _clean(ax)
     ax.legend(fontsize=8, frameon=False, loc="lower left")
-    fig.text(0.01, 0.01, note, fontsize=7.5, color="#52514e", va="bottom")
-    fig.tight_layout(rect=(0, 0.04, 1, 1))
+    fig.tight_layout()
     f2 = ROOT / "figures" / "validate" / f"readable_dd_sources_d{der:g}.png"
     fig.savefig(f2, dpi=150)
     plt.close(fig)
     out.append(f2)
     return out
+
+
+def de_zone_map(cid: str, focus: str = "DE"):
+    """Map of the focus country's zones for one sweep configuration (EU-map colours)."""
+    from bzgen.plot import maps as pm
+    buses = pd.read_csv(ROOT / "data" / "interim" / "buses.csv", index_col=0)
+    lines = pd.read_csv(ROOT / "data" / "interim" / "lines.csv", index_col=0)
+    links = pd.read_csv(ROOT / "data" / "interim" / "links.csv", index_col=0)
+    lab = pd.read_csv(ROOT / "results" / "configs" / cid / "labels.csv")
+    lab = lab[lab.country == focus].set_index("bus").zone.astype(int)
+    row = pd.read_csv(ROOT / "results" / "configs" / cid / "rows.csv").set_index("country").loc[focus]
+    shares = [float(x) for x in str(row.zone_load_share).split("/")]
+    alpha = float(re.match(r"a([\d.]+)_", cid).group(1))
+    mem = sorted(buses[buses.cluster_country == focus].country.unique())
+    fig, ax = plt.subplots(figsize=(5.4, 6.4))
+    pm.draw_country(ax, buses, lines, links, lab, mem)
+    order = lab.value_counts().sort_index().index
+    handles = [matplotlib.patches.Patch(color=_tint(pm.PALETTE[int(z) % len(pm.PALETTE)], 0.55),
+                                        label=f"Zone {i + 1}: {s:.0%} of load")
+               for i, (z, s) in enumerate(zip(order, _shares_by_label(lab, cid, focus, shares)))]
+    ax.legend(handles=handles, fontsize=8, frameon=False, loc="lower left")
+    ax.set_title(f"Germany: 3 bidding zones, {XLABEL.lower()} = {alpha:g}", fontsize=10, loc="left")
+    fig.tight_layout()
+    f = ROOT / "figures" / "validate" / f"de_zones_a{alpha:g}.png"
+    fig.savefig(f, dpi=160)
+    plt.close(fig)
+    return f
+
+
+def _shares_by_label(lab, cid, focus, shares_sorted):
+    """rows.csv lists load shares sorted by zone size; recompute per label from the load key."""
+    from bzgen.cluster.sweep import node_attributes
+    L, _ = node_attributes(config.load())
+    lz = L.reindex(lab.index).fillna(0.0).groupby(lab).sum()
+    return list((lz / lz.sum()).sort_index())
