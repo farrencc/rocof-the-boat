@@ -1,4 +1,12 @@
 {
+ "electricitymaps_zones": {
+  "accessed": "2026-09-29",
+  "bytes": 2568315,
+  "file": "data/cache/electricitymaps/world_809539d5c76d.geojson",
+  "notes": "Electricity Maps electricitymaps-contrib geo/world.geojson at commit 809539d5c76de19291ff6cb7766aca0f583dd826; curated open zone geometry, NOT an ENTSO-E publication (fallback: no authoritative bidding-zone polygons reachable)",
+  "sha256": "d1bcf7d3c68ba8abf8e531375400748c0ddb7b72875c7dbddbd717644edaa923",
+  "url": "https://raw.githubusercontent.com/electricitymaps/electricitymaps-contrib/809539d5c76de19291ff6cb7766aca0f583dd826/geo/world.geojson"
+ },
  "eurostat_demo_r_pjanaggr3": {
   "accessed": "2026-09-29",
   "bytes": 2019779,
@@ -84,7 +92,7 @@
   "bytes": null,
   "file": "",
   "notes": "323/323 points, models=era5, hourly wind_speed_100m,shortwave_radiation, 2019; sha256 over concatenated per-point JSON (sorted lat,lon); points in data/weather_points.csv",
-  "sha256": "9140e00fb45544d5fea274dc3f66d09a916cccd247aadcf34fe5cb479d2bed5c",
+  "sha256": "76a227047f3dc3193b3e61d683e5fe3bd40610e609a6c434712d98d4eac8563d",
   "url": "https://archive-api.open-meteo.com/v1/archive"
  },
  "opsd_time_series_60min": {

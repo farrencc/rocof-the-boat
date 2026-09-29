@@ -1,0 +1,69 @@
+check,scoring,map,derating,hours,violations,asserted,max_excess_EUR
+C_market <= C_nodal,insample,k1,0.2,200,26,False,1869223.7258094908
+C_market + C_redispatch >= C_nodal,insample,k1,0.2,200,0,True,-188597.23924726492
+C_market <= C_nodal,insample,sw_a0.5_lc0.1_lb0.5_dk+0,0.2,200,26,False,1869223.7258094945
+C_market + C_redispatch >= C_nodal,insample,sw_a0.5_lc0.1_lb0.5_dk+0,0.2,200,0,True,-188597.24520647142
+C_market(k=1) <= C_market(split),insample,sw_a0.5_lc0.1_lb0.5_dk+0,0.2,200,0,True,2.0489096641540527e-08
+C_market <= C_nodal,insample,sw_a1_lc0.1_lb0.5_dk+0,0.2,200,26,False,1869223.7258094954
+C_market + C_redispatch >= C_nodal,insample,sw_a1_lc0.1_lb0.5_dk+0,0.2,200,0,True,-188597.26672143897
+C_market(k=1) <= C_market(split),insample,sw_a1_lc0.1_lb0.5_dk+0,0.2,200,0,True,1.6763806343078613e-08
+C_market <= C_nodal,insample,sw_a2_lc0.1_lb0.5_dk+0,0.2,200,26,False,1869223.7258094954
+C_market + C_redispatch >= C_nodal,insample,sw_a2_lc0.1_lb0.5_dk+0,0.2,200,0,True,-188597.2858670709
+C_market(k=1) <= C_market(split),insample,sw_a2_lc0.1_lb0.5_dk+0,0.2,200,0,True,1.4901161193847656e-08
+C_market <= C_nodal,insample,sw_a5_lc0.1_lb0.5_dk+0,0.2,200,26,False,1869223.7258094945
+C_market + C_redispatch >= C_nodal,insample,sw_a5_lc0.1_lb0.5_dk+0,0.2,200,0,True,-188597.23924773012
+C_market(k=1) <= C_market(split),insample,sw_a5_lc0.1_lb0.5_dk+0,0.2,200,0,True,1.862645149230957e-08
+C_market <= C_nodal,insample,sw_a10_lc0.1_lb0.5_dk+0,0.2,200,28,False,1930546.7174238074
+C_market + C_redispatch >= C_nodal,insample,sw_a10_lc0.1_lb0.5_dk+0,0.2,200,0,True,-203637.18910335947
+C_market(k=1) <= C_market(split),insample,sw_a10_lc0.1_lb0.5_dk+0,0.2,200,0,True,3.725290298461914e-09
+C_market <= C_nodal,insample,k1,0.5,200,1,False,6091.305992655805
+C_market + C_redispatch >= C_nodal,insample,k1,0.5,200,0,True,-88315.761163936
+C_market <= C_nodal,insample,sw_a0.5_lc0.1_lb0.5_dk+0,0.5,200,1,False,6091.305992656155
+C_market + C_redispatch >= C_nodal,insample,sw_a0.5_lc0.1_lb0.5_dk+0,0.5,199,0,True,-101836.35091996193
+C_market(k=1) <= C_market(split),insample,sw_a0.5_lc0.1_lb0.5_dk+0,0.5,200,0,True,2.0489096641540527e-08
+C_market <= C_nodal,insample,sw_a1_lc0.1_lb0.5_dk+0,0.5,200,1,False,6091.305992655689
+C_market + C_redispatch >= C_nodal,insample,sw_a1_lc0.1_lb0.5_dk+0,0.5,199,0,True,-91214.48713164125
+C_market(k=1) <= C_market(split),insample,sw_a1_lc0.1_lb0.5_dk+0,0.5,200,0,True,2.0489096641540527e-08
+C_market <= C_nodal,insample,sw_a2_lc0.1_lb0.5_dk+0,0.5,200,1,False,6091.305992655689
+C_market + C_redispatch >= C_nodal,insample,sw_a2_lc0.1_lb0.5_dk+0,0.5,199,0,True,-101222.74985452276
+C_market(k=1) <= C_market(split),insample,sw_a2_lc0.1_lb0.5_dk+0,0.5,200,0,True,1.6763806343078613e-08
+C_market <= C_nodal,insample,sw_a5_lc0.1_lb0.5_dk+0,0.5,200,1,False,6091.305992655689
+C_market + C_redispatch >= C_nodal,insample,sw_a5_lc0.1_lb0.5_dk+0,0.5,199,0,True,-99351.15049268864
+C_market(k=1) <= C_market(split),insample,sw_a5_lc0.1_lb0.5_dk+0,0.5,200,0,True,2.0489096641540527e-08
+C_market <= C_nodal,insample,sw_a10_lc0.1_lb0.5_dk+0,0.5,200,3,False,32322.23219773383
+C_market + C_redispatch >= C_nodal,insample,sw_a10_lc0.1_lb0.5_dk+0,0.5,199,0,True,-50486.437246281654
+C_market(k=1) <= C_market(split),insample,sw_a10_lc0.1_lb0.5_dk+0,0.5,200,0,True,7.450580596923828e-09
+C_market <= C_nodal,insample,k1,0.7,200,0,False,-41493.922657219926
+C_market + C_redispatch >= C_nodal,insample,k1,0.7,200,0,True,-268147.5000035153
+C_market <= C_nodal,insample,sw_a0.5_lc0.1_lb0.5_dk+0,0.7,200,0,False,-41493.92265721946
+C_market + C_redispatch >= C_nodal,insample,sw_a0.5_lc0.1_lb0.5_dk+0,0.7,200,0,True,-274831.91026077257
+C_market(k=1) <= C_market(split),insample,sw_a0.5_lc0.1_lb0.5_dk+0,0.7,200,0,True,1.862645149230957e-08
+C_market <= C_nodal,insample,sw_a1_lc0.1_lb0.5_dk+0,0.7,200,0,False,-41493.92265722004
+C_market + C_redispatch >= C_nodal,insample,sw_a1_lc0.1_lb0.5_dk+0,0.7,200,0,True,-270359.25412299624
+C_market(k=1) <= C_market(split),insample,sw_a1_lc0.1_lb0.5_dk+0,0.7,200,0,True,1.862645149230957e-08
+C_market <= C_nodal,insample,sw_a2_lc0.1_lb0.5_dk+0,0.7,200,0,False,-41493.92265722004
+C_market + C_redispatch >= C_nodal,insample,sw_a2_lc0.1_lb0.5_dk+0,0.7,200,0,True,-271807.5644910564
+C_market(k=1) <= C_market(split),insample,sw_a2_lc0.1_lb0.5_dk+0,0.7,200,0,True,1.862645149230957e-08
+C_market <= C_nodal,insample,sw_a5_lc0.1_lb0.5_dk+0,0.7,200,0,False,-41493.92265722016
+C_market + C_redispatch >= C_nodal,insample,sw_a5_lc0.1_lb0.5_dk+0,0.7,200,0,True,-270081.49846624024
+C_market(k=1) <= C_market(split),insample,sw_a5_lc0.1_lb0.5_dk+0,0.7,200,0,True,2.2351741790771484e-08
+C_market <= C_nodal,insample,sw_a10_lc0.1_lb0.5_dk+0,0.7,200,0,False,-41493.922657219926
+C_market + C_redispatch >= C_nodal,insample,sw_a10_lc0.1_lb0.5_dk+0,0.7,200,0,True,-268182.57352670305
+C_market(k=1) <= C_market(split),insample,sw_a10_lc0.1_lb0.5_dk+0,0.7,200,0,True,1.1175870895385742e-08
+C_market <= C_nodal,insample,k1,1.0,200,0,True,-95643.71351394989
+C_market + C_redispatch >= C_nodal,insample,k1,1.0,200,0,True,-379205.904984195
+C_market <= C_nodal,insample,sw_a0.5_lc0.1_lb0.5_dk+0,1.0,200,0,True,-95643.71351394942
+C_market + C_redispatch >= C_nodal,insample,sw_a0.5_lc0.1_lb0.5_dk+0,1.0,200,0,True,-387024.9223782923
+C_market(k=1) <= C_market(split),insample,sw_a0.5_lc0.1_lb0.5_dk+0,1.0,200,0,True,7.251277565956116e-06
+C_market <= C_nodal,insample,sw_a1_lc0.1_lb0.5_dk+0,1.0,200,0,True,-95643.71351394989
+C_market + C_redispatch >= C_nodal,insample,sw_a1_lc0.1_lb0.5_dk+0,1.0,200,0,True,-353530.31058430905
+C_market(k=1) <= C_market(split),insample,sw_a1_lc0.1_lb0.5_dk+0,1.0,200,0,True,7.253140211105347e-06
+C_market <= C_nodal,insample,sw_a2_lc0.1_lb0.5_dk+0,1.0,200,0,True,-95643.71351395012
+C_market + C_redispatch >= C_nodal,insample,sw_a2_lc0.1_lb0.5_dk+0,1.0,200,0,True,-352665.6654377291
+C_market(k=1) <= C_market(split),insample,sw_a2_lc0.1_lb0.5_dk+0,1.0,200,0,True,7.255002856254578e-06
+C_market <= C_nodal,insample,sw_a5_lc0.1_lb0.5_dk+0,1.0,200,0,True,-95643.71351395012
+C_market + C_redispatch >= C_nodal,insample,sw_a5_lc0.1_lb0.5_dk+0,1.0,200,0,True,-380523.5663490561
+C_market(k=1) <= C_market(split),insample,sw_a5_lc0.1_lb0.5_dk+0,1.0,200,0,True,2.0489096641540527e-08
+C_market <= C_nodal,insample,sw_a10_lc0.1_lb0.5_dk+0,1.0,200,0,True,-95643.71351394989
+C_market + C_redispatch >= C_nodal,insample,sw_a10_lc0.1_lb0.5_dk+0,1.0,200,0,True,-379232.10604122677
+C_market(k=1) <= C_market(split),insample,sw_a10_lc0.1_lb0.5_dk+0,1.0,200,0,True,7.450580596923828e-09

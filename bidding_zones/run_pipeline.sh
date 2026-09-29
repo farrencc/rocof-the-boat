@@ -13,3 +13,4 @@ python -m bzgen.cluster.prepare          # edge stats + normalisation gate -> re
 python -m bzgen.report solve             # -> reports/solve.md
 python -m bzgen.cluster.kselect          # Laplacian spectra -> reports/spectrum.md
 python -m bzgen.cluster.sweep            # parameter sweep, commits after each configuration
+python -m bzgen.validate.run             # zonal market + redispatch, DE split vs k=1 -> reports/validate.md
