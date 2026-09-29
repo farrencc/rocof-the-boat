@@ -39,18 +39,9 @@ def load_config(overlay: str | Path | None = OVERLAY, base: str | Path | None = 
     return cfg
 
 
-def balance_floor(anneal_cfg: dict, k: int) -> float:
-    """Balance-hinge floor on max(load_s, gen_s) / Ltot.
-
-    ``balance_floor_frac_of_mean`` set (not null): that fraction of the mean zone
-    share, ``frac / k`` (the European DBZ parameterisation); otherwise the static
-    absolute ``balance_floor``.  0.15 / 3 = 0.05: identical to the static floor at
-    k = 3.  Same semantics as ``bzgen.dbz.balance_floor``.
-    """
-    frac = anneal_cfg.get("balance_floor_frac_of_mean")
-    if frac is None:
-        return float(anneal_cfg["balance_floor"])
-    return float(frac) / k
+# Balance floor: ``balance_floor_frac_of_mean / k`` when set, else the static absolute
+# ``balance_floor`` (0.15 / 3 = 0.05 at k = 3).  Shared with the European variant.
+from bzgen.dbz import balance_floor  # noqa: E402
 
 
 def results_dir(cfg: dict) -> Path:

@@ -9,9 +9,8 @@ capacity-weighted Mirkin (pair-counting) penalty: label-invariant, so B's labels
 never have to be matched to A's.  (Each node's term is symmetric in A and B, but
 with g_i >= 0, many zero, it is not a metric: always a *penalty*, never a distance.)
 
-Primitives: ``bzgen.dbz.rigidity`` when it is importable (the European variant,
-shared implementation), otherwise the identical fallback ``_rigidity_core``.
-Only the normalisation constant is national:
+Primitives: ``bzgen.dbz.rigidity`` (shared with the European variant, one
+implementation).  Only the normalisation constant is national:
 
     Z_c = (2 n_c / k_c) * gbar_c        gbar_c = mean of g_i over the annealed nodes
 
@@ -24,17 +23,11 @@ from __future__ import annotations
 
 import numpy as np
 
-try:                                                     # shared with the European DBZ
-    from bzgen.dbz.rigidity import (build_tables, fragment_clear, fragment_profile,
-                                    rigidity_apply, rigidity_apply_fragment, rigidity_delta,
-                                    rigidity_delta_fragment, rigidity_from_tables, rigidity_full)
-    SOURCE = "bzgen.dbz.rigidity"
-except ImportError:
-    from bzgen.ndbz._rigidity_core import (build_tables, fragment_clear, fragment_profile,
-                                           rigidity_apply, rigidity_apply_fragment, rigidity_delta,
-                                           rigidity_delta_fragment, rigidity_from_tables,
-                                           rigidity_full)
-    SOURCE = "bzgen.ndbz._rigidity_core"
+from bzgen.dbz.rigidity import (build_tables, fragment_clear, fragment_profile,  # shared with DBZ
+                                rigidity_apply, rigidity_apply_fragment, rigidity_delta,
+                                rigidity_delta_fragment, rigidity_from_tables, rigidity_full)
+
+SOURCE = "bzgen.dbz.rigidity"
 
 __all__ = ["build_tables", "fragment_clear", "fragment_profile", "rigidity_apply",
            "rigidity_apply_fragment", "rigidity_delta", "rigidity_delta_fragment",

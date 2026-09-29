@@ -366,12 +366,13 @@ def test_persisted_baseline_reproduces_static_edges():
 
 
 # --------------------------------------------------------------------------- #
-# tests 5-7: rigidity (active implementation and the fallback copy)
+# tests 5-7: rigidity (the shared bzgen.dbz.rigidity primitives)
 # --------------------------------------------------------------------------- #
 
-from bzgen.ndbz import _rigidity_core, balance_floor, rigidity as R
+from bzgen.dbz import rigidity as dbz_rigidity
+from bzgen.ndbz import balance_floor, rigidity as R
 
-IMPLS = [R, _rigidity_core]
+IMPLS = [R]
 
 
 def _symdiff_reference(B, A, cap):
@@ -476,8 +477,12 @@ def test_rigidity_known_values(impl):
     assert impl.rigidity_full(B3, A2, g2, 2, 2) > 0
 
 
-def test_rigidity_source_is_reported():
-    assert R.SOURCE in ("bzgen.dbz.rigidity", "bzgen.ndbz._rigidity_core")
+def test_rigidity_is_the_shared_dbz_implementation():
+    """One implementation: nDBZ re-exports the European variant's primitives."""
+    assert R.SOURCE == "bzgen.dbz.rigidity"
+    assert R.rigidity_delta is dbz_rigidity.rigidity_delta
+    from bzgen import dbz, ndbz
+    assert ndbz.balance_floor is dbz.balance_floor
 
 
 # --------------------------------------------------------------------------- #
