@@ -1,0 +1,101 @@
+[
+ {
+  "country": "FR",
+  "n_nodes": 770,
+  "sweep_E_min": -1287.4957111502283,
+  "long_E_min": -1289.2163918351614,
+  "long_E_median": -1272.0162143689795,
+  "long_E_spread": 28.66513190295177,
+  "improvement": 1.720680684933086,
+  "rel_improvement": 0.001336455469351317,
+  "ari_long_vs_sweep_map": 0.10168491702319934
+ },
+ {
+  "country": "ES",
+  "n_nodes": 567,
+  "sweep_E_min": -965.1870065358156,
+  "long_E_min": -970.1555269899574,
+  "long_E_median": -952.6960183571575,
+  "long_E_spread": 80.47517615316633,
+  "improvement": 4.968520454141753,
+  "rel_improvement": 0.005147728285293057,
+  "ari_long_vs_sweep_map": 0.20918205095195525
+ },
+ {
+  "country": "DE",
+  "n_nodes": 479,
+  "sweep_E_min": -759.2260949814208,
+  "long_E_min": -760.7968271811014,
+  "long_E_median": -747.4274565942344,
+  "long_E_spread": 45.90630817153897,
+  "improvement": 1.5707321996806058,
+  "rel_improvement": 0.0020688596059373373,
+  "ari_long_vs_sweep_map": 0.2313993390189066
+ },
+ {
+  "country": "IT",
+  "n_nodes": 418,
+  "sweep_E_min": -668.506362992048,
+  "long_E_min": -671.990050594371,
+  "long_E_median": -659.1441079058307,
+  "long_E_spread": 31.250485160102016,
+  "improvement": 3.483687602323016,
+  "rel_improvement": 0.005211151000464681,
+  "ari_long_vs_sweep_map": 0.294463206241906
+ },
+ {
+  "country": "NO",
+  "n_nodes": 211,
+  "sweep_E_min": -292.3466873985835,
+  "long_E_min": -292.80473489037723,
+  "long_E_median": -287.532060128917,
+  "long_E_spread": 43.021711368102046,
+  "improvement": 0.45804749179370674,
+  "rel_improvement": 0.0015667955599893897,
+  "ari_long_vs_sweep_map": 0.952351044539154
+ },
+ {
+  "country": "PL",
+  "n_nodes": 146,
+  "sweep_E_min": -269.973748294466,
+  "long_E_min": -271.85911971874634,
+  "long_E_median": -264.63094350271433,
+  "long_E_spread": 13.30933917070513,
+  "improvement": 1.8853714242803221,
+  "rel_improvement": 0.006983536125978841,
+  "ari_long_vs_sweep_map": 0.2867173307406112
+ },
+ {
+  "country": "SE",
+  "n_nodes": 131,
+  "sweep_E_min": -204.214081867241,
+  "long_E_min": -204.38375659739881,
+  "long_E_median": -203.11487265355095,
+  "long_E_spread": 6.3450377904801485,
+  "improvement": 0.16967473015782275,
+  "rel_improvement": 0.0008308669441714986,
+  "ari_long_vs_sweep_map": 0.2318095520756779
+ },
+ {
+  "country": "BG",
+  "n_nodes": 122,
+  "sweep_E_min": -266.8672794077028,
+  "long_E_min": -266.89225868057736,
+  "long_E_median": -260.6328154726876,
+  "long_E_spread": 57.008398216899934,
+  "improvement": 0.024979272874531944,
+  "rel_improvement": 9.360185681051667e-05,
+  "ari_long_vs_sweep_map": 0.9473248071007624
+ },
+ {
+  "country": "CH",
+  "n_nodes": 122,
+  "sweep_E_min": -197.26176369422143,
+  "long_E_min": -199.2752365241109,
+  "long_E_median": -194.6791087699089,
+  "long_E_spread": 15.611323452567234,
+  "improvement": 2.01347282988948,
+  "rel_improvement": 0.010207111566794038,
+  "ari_long_vs_sweep_map": 0.8471324721866247
+ }
+]

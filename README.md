@@ -42,6 +42,23 @@ Regulation (EU) 2019/943 Art. 14 (zones based on long-term structural congestion
 Deliverable: one minimum-energy map per parameter set (`results/`, `figures/`), with
 restart spread and degeneracy reported alongside it.
 
+## Results in one paragraph
+
+Headline map (α = 2): [`figures/europe/a2_lc0.1_lb0.5_dk+0.png`](figures/europe/a2_lc0.1_lb0.5_dk+0.png).
+Full discussion: [`reports/results.md`](reports/results.md).
+
+The pipeline runs end to end on real data. It produces contiguous zones for 31
+countries under 17 parameter sets. **The central finding is negative.** For the large
+countries (FR, ES, DE, IT, PL, SE) the minimum-energy map is not identifiable:
+structurally different partitions (ARI 0.1–0.3 between them) lie within about 1 % of the
+best energy found, and a 4× longer anneal finds a different map. α trades interdigitated
+zones (small α; about half of all edges are repulsive at α = 1) against microzones
+(large α, fixed k). No Laplacian eigengap is statistically meaningful, so every k is a
+default. Small countries give reproducible maps, but k there is a default too. The
+underlying reason: nodal price differences in a meshed network form regional gradients,
+not steps at congested lines, so edge-wise |Δp| does not localise a boundary. These maps
+are a demonstration of the method and its failure modes, not candidate zones for use.
+
 ## Where to look
 
 | file | what |
@@ -53,6 +70,7 @@ restart spread and degeneracy reported alongside it.
 | `reports/normalisation.md` | the normalisation gate: distributions, remedy, degeneracy |
 | `reports/spectrum.md` | Laplacian spectra, eigengap, the k used per country |
 | `reports/annealer_validation.md` | annealer validated on planted partitions |
+| `reports/results.md` | results, degeneracy, convergence check, sensitivity |
 | `results/sweep.csv` | one row per country × configuration |
 | `figures/` | maps, spectra, diagnostics, sensitivity |
 

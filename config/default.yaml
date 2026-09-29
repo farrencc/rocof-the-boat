@@ -125,5 +125,6 @@ sweep:
     lambda_c_initial: [0.02, 0.5]
     lambda_b: [0.0, 0.1, 2.0]
     dk: [-1, 1, 2]
+  headline: a2_lc0.1_lb0.5_dk+0   # largest alpha with >= 95% of zones above the balance floor (reports/results.md)
   degeneracy_rel_tol: 0.001   # restarts within this relative energy of the best are "near-degenerate"
   degenerate_ari: 0.9         # ... and flagged degenerate if their map differs (ARI below this)
