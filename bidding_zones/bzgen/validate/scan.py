@@ -17,6 +17,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import textwrap
 
 import matplotlib
 matplotlib.use("Agg")
@@ -165,3 +166,86 @@ def derating_panel(df: pd.DataFrame, der: float, tag: str) -> pd.DataFrame:
            "dRedispatch_down_res_GWh", "dDD_RES_TH_GWh", "dNP_slack_focus_GWh", "dCost_total_EUR"]]
     t.to_csv(ROOT / "results" / "validate" / f"scan_{tag}_d{der:g}.csv", index=False)
     return t, oos
+
+
+def _clean(ax):
+    for s in ("top", "right"):
+        ax.spines[s].set_visible(False)
+    for s in ("left", "bottom"):
+        ax.spines[s].set_color("#c9c8c2")
+    ax.grid(axis="y", color="#e6e5e0", lw=0.6)
+    ax.set_axisbelow(True)
+    ax.tick_params(labelsize=9, colors="#52514e")
+
+
+def readable_panels(df: pd.DataFrame, der: float, tag: str) -> list:
+    """The derating panel as two stand-alone figures with plain-language labels."""
+    d = df[np.isclose(df.derating, der)].sort_values("alpha").copy()
+    d["pct"] = 100 * d.dDD_RES_GWh / d.DD_k1_GWh
+    _, oos = derating_panel(df, der, tag)
+    x = np.arange(len(d))
+    lab = [f"{a:g}" for a in d.alpha]
+    xl = "Zone-drawing setting: coupling strength α\n(low = zones follow price gaps, high = zones follow strong grid links)"
+    cap_trade = (f"Trading capacity between zones is set to {der:.0%} of the physical line capacity. "
+                 "Germany is split into 3 zones in every case.")
+    out = []
+
+    fig, ax = plt.subplots(figsize=(7.5, 5.2))
+    ax.bar(x, d.dDD_RES_GWh / 1e3, 0.6, color="#2a78d6", edgecolor="white",
+           label="Quick scan: 200 sample hours, map drawn from the same year")
+    for xi, v, pc in zip(x, d.dDD_RES_GWh / 1e3, d.pct):
+        ax.text(xi, v + (0.05 if v >= 0 else -0.05), f"{v:+.1f} TWh\n({pc:+.0f}%)", ha="center",
+                va="bottom" if v >= 0 else "top", fontsize=8, color="#0b0b0b")
+    if oos is not None and oos["alpha"] in list(d.alpha):
+        i = list(d.alpha).index(oos["alpha"])
+        ax.errorbar(i + 0.38, oos["dDD_RES_GWh"] / 1e3,
+                    yerr=[[(oos["dDD_RES_GWh"] - oos["dDD_RES_lo"]) / 1e3],
+                          [(oos["dDD_RES_hi"] - oos["dDD_RES_GWh"]) / 1e3]],
+                    fmt="o", color="#eb6834", ms=7, capsize=4, lw=2,
+                    label="Proper test: map drawn on half the year, tested on the other half\n(with 95% uncertainty range)")
+    ax.axhline(0, color="#52514e", lw=1)
+    lo, hi = ax.get_ylim()
+    ax.set_ylim(lo - 0.2 * (hi - lo), hi + 0.1 * (hi - lo))
+    ax.set_xticks(x, lab)
+    ax.set_xlabel(xl, fontsize=9, color="#52514e")
+    ax.set_ylabel("Change in wind and solar turned down\n(TWh per year, split minus single zone)",
+                  fontsize=9, color="#52514e")
+    ax.set_title("Does splitting Germany into 3 bidding zones waste less wind and solar?",
+                 fontsize=11, color="#0b0b0b", loc="left")
+    _clean(ax)
+    ax.legend(fontsize=8, frameon=False, loc="upper center", bbox_to_anchor=(0.5, -0.24))
+    fig.text(0.01, 0.01, textwrap.fill(
+        "Below zero = less wind and solar turned down than with Germany as one zone. " + cap_trade
+        + " Exploratory: settings were searched, so the quick-scan reductions may be chance; "
+        "the proper test is the one to trust.", 125), fontsize=7.5, color="#52514e", va="bottom")
+    fig.tight_layout(rect=(0, 0.08, 1, 1))
+    f1 = ROOT / "figures" / "validate" / f"readable_dd_change_d{der:g}.png"
+    fig.savefig(f1, dpi=150)
+    plt.close(fig)
+    out.append(f1)
+
+    fig, ax = plt.subplots(figsize=(7.5, 5.2))
+    sp, rd = d.dSpill_market_GWh.to_numpy() / 1e3, d.dRedispatch_down_res_GWh.to_numpy() / 1e3
+    ax.bar(x, sp, 0.6, color="#eb6834", edgecolor="white",
+           label="Market curtailment: wind and solar the market could not sell across zone borders")
+    ax.bar(x, rd, 0.6, color="#1baf7a", edgecolor="white",
+           label="Redispatch down: wind and solar the grid operator turned down to relieve congested lines")
+    ax.plot(x, sp + rd, "o", color="#0b0b0b", ms=6, label="Net change (the two added together)")
+    ax.axhline(0, color="#52514e", lw=1)
+    ax.set_xticks(x, lab)
+    ax.set_xlabel(xl, fontsize=9, color="#52514e")
+    ax.set_ylabel("Change compared with Germany as one zone\n(TWh per year)", fontsize=9, color="#52514e")
+    ax.set_title("Where the change comes from: market versus grid operator",
+                 fontsize=11, color="#0b0b0b", loc="left")
+    _clean(ax)
+    ax.legend(fontsize=8, frameon=False, loc="upper center", bbox_to_anchor=(0.5, -0.24))
+    fig.text(0.01, 0.01, textwrap.fill(
+        "Splitting moves some turn-down from the grid operator to the market. It saves wind and "
+        "solar only when the grid operator's cut (green) is bigger than the market's rise (orange). "
+        + cap_trade + " Quick scan: 200 sample hours.", 125), fontsize=7.5, color="#52514e", va="bottom")
+    fig.tight_layout(rect=(0, 0.08, 1, 1))
+    f2 = ROOT / "figures" / "validate" / f"readable_dd_sources_d{der:g}.png"
+    fig.savefig(f2, dpi=150)
+    plt.close(fig)
+    out.append(f2)
+    return out
