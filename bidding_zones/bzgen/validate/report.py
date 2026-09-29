@@ -319,6 +319,15 @@ def markdown(cfg, sn, tag, maps, rows, deltas, checks, bnd, nodal_meta, pocket, 
                   "bootstrap is not meaningful on weighted representative hours.")
     if stage == "A":
         fl.append("**Stage A only**: no redispatch, so no dispatch-down result.")
+    if v.get("np_slack_penalty") is not None:
+        fl.append(f"**Net positions are soft, not fixed (quick-result fix; the brief asked for hard "
+                  f"equalities and no relaxation).** With hard equalities most hours were LP-infeasible: the "
+                  f"zonal market schedules exchanges the meshed grid cannot deliver even with load shedding. "
+                  f"Deviation from a zone's market net position costs €{v['np_slack_penalty']:g}/MWh (above every "
+                  "generator cost, below load shedding), so net positions hold wherever redispatch can deliver "
+                  "them. The undeliverable volume is reported (`np_slack_*`, `np_undeliverable_hours*`) and "
+                  "is itself a result: it measures how far the zonal market's exchanges exceed what the grid "
+                  "can carry.")
     fl.append("**Zone polygons are not an ENTSO-E publication.** No authoritative bidding-zone polygon set "
               "was reachable (transparency.entsoe.eu and entsoe.eu blocked by the session's egress policy). "
               f"SE1–4, NO1–5, DK1–2 and six Italian zones come from Electricity Maps' curated open "
@@ -378,7 +387,7 @@ def markdown(cfg, sn, tag, maps, rows, deltas, checks, bnd, nodal_meta, pocket, 
           "3. **Stage B — redispatch.** The full nodal network with KVL. Each unit gets an up part "
           "(`mc + markup`) and a down part (`−mc + markup` per MWh backed down). The market schedule is "
           "a fixed injection. One equality per zone and hour holds the net position (Σ up = Σ down). "
-          "Load shedding is available at "
+          "Net positions are soft in this run (flag above). Load shedding is available at "
           f"€{cfg['solve']['load_shedding_cost']:g}/MWh. No relaxation and no counter-trading.",
           "4. **Metrics** (DE-LU incl. offshore): DD_RES = market spill[RES] + redispatch down[RES]; "
           "DD_RES_TH adds thermal down-regulation. Attribution: market spill over binding zonal "
@@ -412,7 +421,8 @@ def markdown(cfg, sn, tag, maps, rows, deltas, checks, bnd, nodal_meta, pocket, 
     if stage == "AB" and "DD_RES_GWh" in rows:
         cols = ["scoring", "map", "derating", "DD_RES_GWh", "DD_RES_TH_GWh", "DD_share_of_avail_res",
                 "internal_share", "border_share", "C_redispatch_EUR", "C_total_EUR", "efficiency_gap",
-                "lp_infeasible_hours", "shed_hours_excl_pockets", "shed_focus_GWh", "shed_pocket_GWh",
+                "lp_infeasible_hours", "np_undeliverable_hours", "np_slack_focus_GWh",
+                "shed_hours_excl_pockets", "shed_focus_GWh", "shed_pocket_GWh",
                 "dDD_RES_GWh", "dDD_RES_lo", "dDD_RES_hi"]
         t = rows[[c for c in cols if c in rows]].copy()
         for c in ("C_redispatch_EUR", "C_total_EUR"):

@@ -247,3 +247,29 @@ def test_week_block_bootstrap_and_pairing(cfg):
     hs["DD_RES"] = base - 10.0 + rng.normal(0, 30, len(idx))
     b = I.block_bootstrap(I.paired(hs, hk, "DD_RES", w), cfg)
     assert b["lo"] < b["point"] < b["hi"]
+
+
+def test_undeliverable_net_position_goes_to_slack(cfg):
+    """Market ATC (derating 1) above what KVL lets the cut carry: hard net positions are
+    infeasible, the soft version solves and reports the undeliverable MWh."""
+    snaps = pd.date_range("2019-01-07", periods=1, freq="h")
+    # a -- b direct (weak) and a -- c -- b (strong): zone A = {a}, zone B = {b, c}
+    buses = {"a": ("DE", 0, 0), "b": ("FR", 2, 0), "c": ("FR", 1, 1)}
+    lines = [("a", "b", 10, 50), ("a", "c", 10, 400), ("c", "b", 10, 400)]
+    n = synth(buses, lines, [("a CCGT", "a", "CCGT", 500, 10.0, [1.0]),
+                             ("b CCGT", "b", "CCGT", 500, 50.0, [1.0])], {"b": [400.0]}, snaps)
+    bdf = pd.DataFrame({"country": ["DE", "FR", "FR"], "cluster_country": ["DE", "FR", "FR"],
+                        "x": [0, 2, 1], "y": [0, 0, 1]}, index=list(buses))
+    zm = zonemap.zone_map(bdf, None, cfg, real=pd.Series(dtype=object))
+    costs = n.generators.mc_base.to_numpy()
+    a = ZonalMarket(n, zm, 1.0, cfg, costs)
+    pmax, load = hour_inputs(n, snaps[0])
+    ra = a.solve(pmax, load)
+    assert ra["net_position"][list(a.zones).index("DE")] == pytest.approx(400.0)   # ATC 450
+    hard = copy.deepcopy(cfg); hard["validate"]["np_slack_penalty"] = None
+    assert Redispatch(n, zm, hard, costs).solve(pmax, load, ra["p"])["status"] != "ok"
+    b = Redispatch(n, zm, cfg, costs).solve(pmax, load, ra["p"])
+    assert b["status"] == "ok"
+    # KVL: the direct path (x = 10) carries 2/3 of a->b flow, the path via c (x = 20) 1/3;
+    # the direct line binds at 50, so the cut delivers 75 MW. Both zones deviate by 325.
+    assert b["np_slack"].sum() == pytest.approx(2 * (400.0 - 75.0), rel=1e-6)

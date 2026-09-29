@@ -126,6 +126,17 @@ class DCOPF:
                        np.asarray(val, dtype=float))
         self.n_extra = getattr(self, "n_extra", 0) + len(rows)
 
+    def add_cols_on_extra_rows(self, cost: np.ndarray, rows: np.ndarray, coef: np.ndarray) -> None:
+        """Append one column per entry, >= 0, entering extra row ``rows[i]`` (index among
+        the rows added by :meth:`add_gen_rows`) with ``coef[i]`` at cost ``cost[i]``.
+        Their values are returned as ``extra_x`` by :meth:`solve`."""
+        k = len(cost)
+        r0 = self.N + self.NL
+        self.h.addCols(k, np.asarray(cost, float), np.zeros(k), np.full(k, 1e30), k,
+                       np.arange(k, dtype=np.int32), (r0 + np.asarray(rows)).astype(np.int32),
+                       np.asarray(coef, float))
+        self.n_extra_cols = getattr(self, "n_extra_cols", 0) + k
+
     def solve(self, pmax: np.ndarray, load: np.ndarray, pmin: np.ndarray | None = None,
               duals: bool = False) -> dict:
         """pmax (pmin): MW upper (lower, default 0) bound per generator; load: MW per bus.
@@ -159,11 +170,12 @@ class DCOPF:
         th = x[self.G:self.G + self.N]
         out = {"status": "ok", "retry": retry, "price": y[:self.N].copy(), "p": x[:self.G].copy(),
                "line_p": self.bl * (th[self.l0] - th[self.l1]),
-               "link_p": x[self.G + self.N:].copy(),
+               "link_p": x[self.G + self.N:self.G + self.N + self.NK].copy(),
+               "extra_x": x[self.G + self.N + self.NK:].copy(),
                "objective": h.getInfo().objective_function_value}
         if duals:
             z = np.asarray(sol.col_dual)
             out["line_mu"] = y[self.N:self.N + self.NL].copy()
-            out["link_mu"] = z[self.G + self.N:].copy()
+            out["link_mu"] = z[self.G + self.N:self.G + self.N + self.NK].copy()
             out["extra_dual"] = y[self.N + self.NL:].copy()
         return out

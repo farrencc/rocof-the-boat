@@ -163,7 +163,8 @@ def _init(cfg, seed, zmap, derating, pocket, focus_bus, stages):
     _V.update(n=n, zm=zm, rd=rd, ctx=ctx, cfg=cfg, gen_zone=np.array([zi[z] for z in zg]),
               shed=(n.generators.carrier == "load_shedding").to_numpy(),
               res_all=n.generators.carrier.isin(cfg["validate"]["res_carriers"]).to_numpy(),
-              pocket_gen=n.generators.bus.isin(pocket).to_numpy())
+              pocket_gen=n.generators.bus.isin(pocket).to_numpy(),
+              fzm=np.isin(rd.zones, list(ctx.focus_zones)) if rd is not None else None)
 
 
 def _sparse(t, a, tol):
@@ -193,6 +194,11 @@ def _block(snaps):
         row.update(snapshot=s, stageA_retry=a.get("retry", ""),
                    stageB_status="" if b is None else b["status"],
                    stageB_retry="" if b is None else b.get("retry", ""), seconds=time.time() - t)
+        ok_b = b is not None and b["status"] == "ok"
+        row["np_slack_total"] = float(b["np_slack"].sum()) if ok_b else np.nan
+        row["np_slack_focus"] = float(b["np_slack"][V["fzm"]].sum()) if ok_b else np.nan
+        if ok_b:
+            out.setdefault("slack", []).append((s, b["np_slack"]))
         out["rows"].append(row)
         pz = np.clip(a["p"], 0.0, pmax)
         out["pz"].append(pz.astype(np.float32))
@@ -232,7 +238,7 @@ def run_one(cfg, sn, out, map_id, zmap, derating, hours, pocket, focus_bus, stag
     done = d / "done.json"
     if done.exists():
         meta = json.loads(done.read_text())
-        if set(stages) <= set(meta["stages"]):
+        if set(stages) <= set(meta["stages"]) and meta["hours"] == len(hours):
             log(f"skip {rid} (done)")
             return d
     d.mkdir(parents=True, exist_ok=True)
@@ -252,7 +258,7 @@ def run_one(cfg, sn, out, map_id, zmap, derating, hours, pocket, focus_bus, stag
     zm = ZonalMarket(n, zmap, derating, cfg, noise_costs(n, cfg))
     order = np.argsort(np.array([r["snaps"][0] for r in res], dtype="datetime64[ns]"))
     res = [res[i] for i in order]
-    cat = lambda k: [x for r in res for x in r[k]]
+    cat = lambda k: [x for r in res for x in r.get(k, [])]
     rows = pd.DataFrame(cat("rows")).set_index("snapshot").sort_index()
     idx = rows.index
     rows.to_parquet(d / "hourly.parquet")
@@ -275,6 +281,11 @@ def run_one(cfg, sn, out, map_id, zmap, derating, hours, pocket, focus_bus, stag
             for k in np.flatnonzero(sz > tol):
                 inf.append({"snapshot": s, "kind": "shed", "zone": zi[k], "shed_mwh": float(sz[k]),
                             "pocket_mwh": float(pk[k]), "status": "ok"})
+        rz = Redispatch.zone_names(zmap, n) if "B" in stages else []
+        for s, sl in cat("slack") if any("slack" in r for r in res) else []:
+            for k in np.flatnonzero(sl > tol):
+                inf.append({"snapshot": s, "kind": "np_slack", "zone": rz[k], "shed_mwh": float(sl[k]),
+                            "pocket_mwh": np.nan, "status": "ok"})
         for s, st in rows.stageB_status.items():
             if st != "ok":
                 inf.append({"snapshot": s, "kind": "lp_infeasible", "zone": "ALL",
@@ -303,12 +314,24 @@ def select(cfg, n_snapshots):
     return sn, ("all" if c["solve"]["n_snapshots"] == "all" else f"rep{int(c['solve']['n_snapshots'])}")
 
 
-def plan_runs(cfg, maps: dict, sn: pd.DataFrame) -> list[dict]:
+def plan_runs(cfg, maps: dict, sn: pd.DataFrame, scorings) -> list[dict]:
+    """Runs needed for the requested scoring sets, reference derating first (so the
+    headline number is available early); k = 1 covers the union of their hours."""
     even = zonemap.iso_week(sn.index).iso_week.to_numpy() % 2 == 0
+    need = {"insample": ("none", "insample"), "oos_even": ("none", "oos")}
+    ref = cfg["validate"]["reference_derating"]
+    ders = sorted(cfg["validate"]["deratings"], key=lambda d: (not np.isclose(d, ref), d))
     runs = []
-    for mid, m in maps.items():
-        hours = sn.index[even] if m["fit"] == "oos" else sn.index
-        for der in cfg["validate"]["deratings"]:
+    for der in ders:
+        for mid, m in maps.items():
+            if not any(m["fit"] in need[s] for s in scorings):
+                continue
+            if m["fit"] == "oos":
+                hours = sn.index[even]
+            elif m["fit"] == "none" and scorings == ["oos_even"]:
+                hours = sn.index[even]
+            else:
+                hours = sn.index
             runs.append({"map": mid, "derating": float(der), "hours": hours})
     return runs
 
@@ -333,6 +356,8 @@ def main():
     ap.add_argument("--workers", type=int)
     ap.add_argument("--check", action="store_true")
     ap.add_argument("--report-only", action="store_true")
+    ap.add_argument("--scoring", nargs="*", choices=["oos_even", "insample"],
+                    help="only these scoring sets (default: validate.scoring)")
     args = ap.parse_args()
     cfg = config.load()
     v = cfg["validate"]
@@ -365,7 +390,9 @@ def main():
     if args.check:
         crosscheck(cfg, sn, zmaps, out)
     if not args.report_only:
-        for r in plan_runs(cfg, maps, sn):
+        scorings = args.scoring or list(v["scoring"])
+        v["scoring"] = scorings
+        for r in plan_runs(cfg, maps, sn, scorings):
             run_one(cfg, sn, out, r["map"], zmaps[r["map"]], r["derating"], r["hours"], pocket,
                     focus_bus, args.stage, workers)
     from bzgen.validate import report

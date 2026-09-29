@@ -97,6 +97,7 @@ class Context:
         self.line_cap = (n.lines.s_nom * cfg["network"]["s_max_pu"]).to_numpy()
         self.link_cap = n.links.p_nom.to_numpy()
         fz = set(zmap[focus_bus.reindex(zmap.index).to_numpy()].unique())
+        self.focus_zones = fz
         self.zl_cat = zone_link_categories(zonal_links.bus0, zonal_links.bus1, fz)
         self.zl_cap = zonal_links.p_nom.to_numpy()
 
@@ -176,6 +177,12 @@ def summarise(h: pd.DataFrame, w: pd.Series, nodal_cost: pd.Series) -> dict:
            "C_market_EUR": tot("C_market", ok, sc_ok),
            "C_redispatch_EUR": tot("C_redispatch", ok, sc_ok),
            "C_markup_EUR": tot("C_markup", ok, sc_ok)}
+    if "np_slack_total" in h:
+        tol = 1.0
+        row["np_slack_total_GWh"] = tot("np_slack_total", ok, sc_ok) / 1e3
+        row["np_slack_focus_GWh"] = tot("np_slack_focus", ok, sc_ok) / 1e3
+        row["np_undeliverable_hours"] = int((h.loc[ok, "np_slack_total"] > tol).sum())
+        row["np_undeliverable_hours_focus"] = int((h.loc[ok, "np_slack_focus"] > tol).sum())
     cn = float((nodal_cost.reindex(h.index[ok]) * wo).sum() * sc_ok)
     row["C_nodal_EUR"] = cn
     row["C_total_EUR"] = row["C_market_EUR"] + row["C_redispatch_EUR"]

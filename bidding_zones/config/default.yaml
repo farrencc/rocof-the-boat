@@ -148,6 +148,10 @@ validate:
   deratings: [0.2, 0.5, 0.7, 1.0]   # inter-zone ATC = derating * sum(s_nom * s_max_pu) over cut AC branches
   reference_derating: 0.7   # INFERENCE: derating at which headline numbers are quoted (bands span all)
   markup: 1.0               # EUR/MWh on both redispatch directions
+  # Soft net positions (quick-result fix; the brief asked for hard equalities): deviation from a
+  # zone's market net position costs this much per MWh. INFERENCE: above every generator cost,
+  # below load_shedding_cost. null = hard equalities (most hours then LP-infeasible).
+  np_slack_penalty: 1000.0
   n_siblings: 3
   sibling_rel_tol: 0.01     # widened from sweep.degeneracy_rel_tol (0 DE restarts within 0.001; user decision)
   scoring: [oos_even, insample]   # oos_even primary: maps refit on odd ISO weeks, scored on even weeks
