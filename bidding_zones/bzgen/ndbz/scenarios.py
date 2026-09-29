@@ -35,16 +35,25 @@ Normalisation (``scenario.normalisation``)
 ------------------------------------------
 ``self``      ``edges.normalise`` on the scenario's own statistics: mean 1 per country
               by construction, so a scenario's overall severity is divided out.
-``baseline``  every scenario's statistic is remedied and divided with the parameters
-              of the *reference* (full year, ``as_is`` - the static pipeline's own
-              table): clip threshold, median, rank table and country mean all come
-              from the reference.  A more congested scenario therefore has a larger
-              dp~ (mean > 1).  This is intended; see tests/test_ndbz.py.
+``baseline``  (default; decision recorded in reports/ndbz_scenarios.md) the country
+              scale is the *reference* (full year, ``as_is`` - the static pipeline's
+              own table): the remedied statistic is divided by the reference country
+              mean.  The ``clip`` remedy clips at the scenario's *own* quantile, so a
+              uniformly more congested scenario scales exactly (dp~ -> c dp~) instead
+              of piling its edges up at the reference cap; scale-free remedies take
+              their parameter from the reference (``log1p``: median, ``rank``: ECDF),
+              since the scenario's own would divide the severity out.  A more
+              congested scenario therefore has a larger dp~ (mean > 1).  Intended;
+              see tests/test_ndbz.py.
+``baseline_refclip``  as ``baseline`` but the clip threshold also comes from the
+              reference (the original specification).  Kept for comparison: in
+              extreme scenarios it pins up to ~70 % of a country's edges at one
+              value (``above_ref_clip``), which ties them in the Potts term.
 
-``dp_n_baseline_ownclip`` (diagnostic, never selected by ``mode``): the ``clip``
-remedy at the scenario's *own* quantile, divided by the reference mean.  Under the
-reference clip, an extreme scenario can pin a large share of its edges at the
-reference cap (``above_ref_clip``), which ties them in the Potts term.
+Countries whose reference statistic has no congestion signal (country mean below
+``edges.signal_min``) are flagged ``no_signal``: under ``baseline`` their tiny
+reference mean would amplify a few congested scenario hours without bound, so the
+re-zoning skips them.
 
 J~ is topology only and identical across scenarios (asserted).
 """
@@ -357,48 +366,51 @@ def remedy_fn(ref: np.ndarray, how: str | None, q: float):
     raise ValueError(how)
 
 
+NORMALISATIONS = ("baseline", "baseline_refclip", "self")
+
+
 def normalise(st: pd.DataFrame, ref: pd.DataFrame, cfg: dict, mode: str | None = None
               ) -> pd.DataFrame:
     """Scenario edge table with ``dp_n`` / ``J_n`` in the ``edges.normalise`` layout.
 
     ``ref`` is the reference (full-year) statistics table, same row index.  Adds
-    ``dp_n_self`` and ``dp_n_baseline`` (both always computed) and sets ``dp_n`` to
-    the one selected by ``mode``; ``dp_country_mean`` is the divisor actually used.
+    ``dp_n_baseline``, ``dp_n_baseline_refclip`` and ``dp_n_self`` (all always
+    computed), ``above_ref_clip`` and ``no_signal``, and sets ``dp_n`` (and the
+    divisor ``dp_country_mean``) to the one selected by ``mode``.
     """
     mode = mode or cfg["scenario"]["normalisation"]
-    if mode not in ("baseline", "self"):
+    if mode not in NORMALISATIONS:
         raise ValueError(mode)
     e = cfg["edges"]
     stat = STAT_COL[e["statistic"]]
+    how, q = e.get("dp_remedy"), e.get("dp_clip_q", 0.99)
     out = E.normalise(st, cfg).sort_index()
     ref_n = E.normalise(ref.loc[out.index], cfg).sort_index()
     assert np.array_equal(out.J_n.to_numpy(), ref_n.J_n.to_numpy()), "J~ depends on the scenario"
     out["dp_n_self"] = out.dp_n
     out["dp_country_mean_self"] = out.dp_country_mean
-    base = pd.Series(np.nan, index=out.index)
-    mean_base = pd.Series(np.nan, index=out.index)
+    cols = {k: pd.Series(np.nan, index=out.index) for k in
+            ("dp_n_baseline", "dp_n_baseline_refclip", "dp_country_mean_baseline")}
     above = pd.Series(False, index=out.index)
-    own = pd.Series(np.nan, index=out.index)
+    nosig = pd.Series(False, index=out.index)
     for c, g in out.groupby("country"):
         r = ref.loc[g.index, stat].to_numpy(float)
-        f = remedy_fn(r, e.get("dp_remedy"), e.get("dp_clip_q", 0.99))
-        m = f(r).mean()
         x = g[stat].to_numpy(float)
-        base[g.index] = f(x) / m if m > 0 else 0.0
-        mean_base[g.index] = m
-        if e.get("dp_remedy") == "clip":
-            above[g.index] = x > np.quantile(r, e.get("dp_clip_q", 0.99))
-            # diagnostic variant: clip at the scenario's own quantile, divide by the
-            # reference mean (keeps severity without pinning edges at the reference cap)
-            own[g.index] = np.minimum(x, np.quantile(x, e.get("dp_clip_q", 0.99))) / m if m > 0 else 0.0
-        else:
-            own[g.index] = base[g.index]
-    out["dp_n_baseline"] = base
-    out["dp_country_mean_baseline"] = mean_base
+        f_ref = remedy_fn(r, how, q)
+        f_own = remedy_fn(x, how, q) if how == "clip" else f_ref
+        m = f_ref(r).mean()
+        cols["dp_n_baseline"][g.index] = f_own(x) / m if m > 0 else 0.0
+        cols["dp_n_baseline_refclip"][g.index] = f_ref(x) / m if m > 0 else 0.0
+        cols["dp_country_mean_baseline"][g.index] = m
+        if how == "clip":
+            above[g.index] = x > np.quantile(r, q)
+        nosig[g.index] = r.mean() < e.get("signal_min", 0.01)
+    for k, v in cols.items():
+        out[k] = v
     out["above_ref_clip"] = above
-    out["dp_n_baseline_ownclip"] = own
-    if mode == "baseline":
-        out["dp_n"] = out.dp_n_baseline
+    out["no_signal"] = nosig
+    if mode != "self":
+        out["dp_n"] = out[f"dp_n_{mode}"]
         out["dp_country_mean"] = out.dp_country_mean_baseline
     out["normalisation"] = mode
     return out

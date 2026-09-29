@@ -17,7 +17,7 @@ scenario:
     load_q: 0.3333          # ... and top tercile of load
     widen_step: 0.05        # both quantiles widened by this step until min_snapshots is reached
   clip_handling: as_is      # as_is | exclude_clipped (drop edge-hours with an endpoint at the clip) | unclipped (solved prices before the clip)
-  normalisation: baseline   # baseline (divide by the full-year country scale) | self (renormalise per scenario)
+  normalisation: baseline   # baseline (own-quantile clip, full-year country mean) | baseline_refclip (clip threshold also full-year) | self (renormalise per scenario)
   bootstrap:
     n: 500
     seed: 7
@@ -27,5 +27,20 @@ scenario:
     spearman_min: 0.9       # rank correlation of the per-edge statistic below this
     mean_rel_change: 0.2    # relative change of the country mean above this
 
+  # Decision (step-1 checkpoint, reports/ndbz_scenarios.md): the clip is material in these
+  # countries, so the re-zoning there is also run with the unclipped prices and both reported.
+  clip_robustness:
+    countries: [FR, NO, SE]
+    handling: unclipped
+  skip_no_signal: true      # countries without a full-year congestion signal are not re-zoned
+
+anneal:
+  # Balance floor as a fraction of the mean zone share: floor = frac / k (as in config/dbz.yaml).
+  # 0.15 / 3 = 0.05 reproduces the static absolute floor at k = 3 (28 of 31 countries);
+  # null = the static absolute anneal.balance_floor.
+  balance_floor_frac_of_mean: 0.15
+  T0_band: [0.001, 1000.0]  # initial temperature sanity band: fail loudly outside it
+
 rigidity:
   lambda: [0.1, 0.3, 1.0, 3.0, 10.0]
+  seed_offset: 10000        # restart r of a cell uses the static seed formula + seed_offset + r

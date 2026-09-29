@@ -36,33 +36,28 @@ prices. So `unclipped` is safe for `duration` but not for `mean`.
   (0.85).
 - Under `self`, all of this is divided out by construction (mean 1).
 
-**3. Decision needed: the reference-year Δp cap pins many edges in extreme scenarios.**
-As specified, `baseline` normalisation takes the `clip` remedy's threshold (the
-reference 99th percentile) from the full year. In a scenario more congested than the
-year, every edge above that threshold is set to the same value:
+**3. Normalisation: decided after the checkpoint.** The original specification took the
+`clip` remedy's threshold from the reference year (now `baseline_refclip`). In
+scenarios more congested than the year, that pinned 45–50 % of NO's edges, 61–64 %
+of SE's, up to 73 % of IE's and up to 51 % of PL's at a single value, which flattens
+the re-zoning signal. The default `baseline` therefore:
 
-- 45–50 % of NO's edges and 61–64 % of SE's are pinned in `peak_demand` /
-  `dunkelflaute` / `max_dispersion`.
-- IE: 35 % in `peak_demand`, 67–73 % in `wind_surplus` / `max_dispersion`.
-- PL: 44–51 % in `wind_surplus` / `max_dispersion`.
+- clips at the scenario's **own** 99th percentile and divides by the reference-year
+  country mean, so severity is kept and a uniformly c-times more congested scenario
+  gives exactly c × dp̃;
+- **skips** the countries with no full-year congestion signal (BG, EE, GR, LT, LV, MK,
+  AL): their near-zero reference mean would otherwise inflate dp̃ to ~40.
 
-Tied edges carry the same w_ij, so for them the physical term only says "congested";
-it no longer says *which* boundary is more congested. The re-zoning signal is
-flattened there, not only rescaled.
+Weakly (but not negligibly) congested countries still get large dp̃ in `max_dispersion`:
+XK 33, RS 18, BA 13, SK 10. This is genuine rather than an artefact. dp̃ is bounded by
+1 / (the country's full-year share of congested hours), and a country congested in 3 %
+of the year can be congested in half of its most-dispersed hours. Expect those
+countries to re-zone freely at every λ_rigid in the sweep, and read their results as
+"the scenario overwhelms the anchor", not as a calibrated trade-off.
 
-The diagnostic variant (own 99th-percentile clip, reference mean) avoids the ties, but
-has the opposite failure. In countries with almost no full-year signal (BG, GR, LT, LV,
-MK, AL, XK), the reference mean is tiny and dp̃ reaches ~40. Such a scenario would
-overwhelm the rigidity term there on the strength of a few congested hours.
-
-Options, in the order I would recommend them:
-
-- **(a)** Own-quantile clip with the reference mean, restricted to countries that have a
-  full-year congestion signal. Countries without one are skipped, as the task already
-  plans for "no congestion signal".
-- **(b)** Keep the reference cap, as specified, and report the pinned share next to
-  every result.
-- **(c)** `self` normalisation, which gives up severity.
+**Clip: decided.** `as_is` stays the default (it is what A was built on). FR, NO and SE
+are additionally re-zoned with `unclipped` (`scenario.clip_robustness`), and both are
+reported.
 
 **4. Sample size is adequate wherever there is a signal.**
 

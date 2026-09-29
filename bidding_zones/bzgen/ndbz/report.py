@@ -82,7 +82,8 @@ def long_edges(tables: dict, cfg: dict) -> pd.DataFrame:
             "country": t.country.to_numpy(), "dp_mean": t.dp_mean.to_numpy(),
             "dp_duration": t.dp_duration.to_numpy(), "dp_quantile": t.dp_quantile.to_numpy(),
             "stat": t[stat].to_numpy(), "dp_n_baseline": t.dp_n_baseline.to_numpy(),
-            "dp_n_self": t.dp_n_self.to_numpy(), "dp_n_baseline_ownclip": t.dp_n_baseline_ownclip.to_numpy(),
+            "dp_n_self": t.dp_n_self.to_numpy(), "dp_n_baseline_refclip": t.dp_n_baseline_refclip.to_numpy(),
+            "no_signal": t.no_signal.to_numpy(),
             "above_ref_clip": t.above_ref_clip.to_numpy()}))
     return pd.concat(parts, ignore_index=True)
 
@@ -156,8 +157,12 @@ def write_scenarios(out: dict, cfg: dict) -> None:
                   cmap=plots.DIV, norm=plots.TwoSlopeNorm(0.0, min(-1, np.nanmin(rel_unc.to_numpy())),
                                                           max(1, np.nanmax(rel_unc.to_numpy()))),
                   flag=mat_any.reindex(index=rel_unc.index, columns=rel_unc.columns).fillna(False))
+    ref_t = tables[("country", "baseline", "as_is")]
+    no_signal_ref = sorted(ref_t[ref_t.no_signal].country.unique())
     sev_c = severity(tables, "country", names).reindex(columns=order)
     sev_e = severity(tables, "europe", names).reindex(columns=order)
+    sev_c[no_signal_ref] = np.nan               # skipped: no full-year congestion signal
+    sev_e[no_signal_ref] = np.nan
     f_sev = fig / "scenarios_severity_country.png"
     plots.severity_heatmap(sev_c, f_sev, "Mean dp̃ per country under baseline normalisation "
                            "(country-scope scenarios)")
@@ -211,12 +216,12 @@ def write_scenarios(out: dict, cfg: dict) -> None:
              for n in names}
     above = pd.DataFrame(above).T.reindex(columns=order)
     f_pin = fig / "scenarios_pinned_at_reference_cap.png"
-    plots.heatmap(above * 100, f_pin, "Edges pinned at the reference-year Δp cap under baseline "
+    plots.heatmap(above * 100, f_pin, "Edges pinned at the reference-year Δp cap under baseline_refclip "
                   "normalisation (%)", "% of the country's edges", fmt="{:.0f}")
-    sev_own = severity(tables, "country", names, "dp_n_baseline_ownclip").reindex(columns=order)
-    f_sev_own = fig / "scenarios_severity_country_ownclip.png"
-    plots.severity_heatmap(sev_own, f_sev_own, "Mean dp̃, diagnostic variant: clip at the scenario's "
-                           "own 99th percentile, divide by the reference mean")
+    sev_ref = severity(tables, "country", names, "dp_n_baseline_refclip").reindex(columns=order)
+    f_sev_ref = fig / "scenarios_severity_country_refclip.png"
+    plots.severity_heatmap(sev_ref, f_sev_ref, "Mean dp̃, baseline_refclip (reference-year clip "
+                           "threshold, the original specification)")
 
     L = []
     a = L.append
@@ -379,10 +384,20 @@ def write_scenarios(out: dict, cfg: dict) -> None:
     a("## 3. Normalisation: baseline vs self")
     a("")
     a("`self` renormalises each scenario to mean dp̃ = 1 per country, so only the spatial "
-      "pattern survives. `baseline` (default) uses the full-year reference for the clip "
-      f"threshold (q = {e['dp_clip_q']}) and the country mean. A scenario that is more "
-      "congested than the year then has mean dp̃ > 1, which strengthens the Potts term "
-      "against a fixed rigidity term. That is intended, and it is tested.")
+      "pattern survives. `baseline` (default) divides by the **full-year** country mean, so "
+      "a scenario that is more congested than the year has mean dp̃ > 1. That strengthens "
+      "the Potts term against a fixed rigidity term, which is intended and tested.")
+    a("")
+    a(f"**Decision (after the step-1 checkpoint).** The `clip` remedy (q = {e['dp_clip_q']}) "
+      "clips each scenario at its **own** 99th percentile; only the divisor comes from the "
+      "reference year. With the reference-year threshold (`baseline_refclip`, the original "
+      "specification), extreme scenarios pinned up to ~70 % of a country's edges at one "
+      "value (table below), tying them in the Potts term. With the own-quantile clip, a "
+      "uniformly c-times more congested scenario gives exactly c × dp̃. Countries with "
+      f"no full-year congestion signal ({', '.join(no_signal_ref)}) are **skipped** by the "
+      "re-zoning. Their reference mean is ≈ 0, so any scenario would be amplified without "
+      "bound (mean dp̃ up to ~40 under the own-quantile clip). They are blank in the "
+      "severity maps.")
     a("")
     a(f"![severity, country scope]({_rel(f_sev)})")
     a("")
@@ -390,26 +405,14 @@ def write_scenarios(out: dict, cfg: dict) -> None:
     a("")
     a(f"![ECDF]({_rel(f_ecdf)})")
     a("")
-    a("Under `baseline`, a scenario's per-edge value is capped at the **reference** clip "
-      "threshold, so congestion beyond the year's 99th-percentile edge is compressed. "
-      "Share of edges pinned at that cap (all tied at the same dp̃):")
+    a("For comparison, `baseline_refclip` pins every scenario edge above the reference "
+      "year's 99th-percentile edge to the same dp̃. Share of edges pinned:")
     a("")
     a(f"![pinned]({_rel(f_pin)})")
     a("")
-    big = above.T.stack()
-    big = big[big >= 0.25].sort_values(ascending=False)
-    if len(big):
-        a(f"**{len(big)} (country, scenario) pairs pin ≥ 25 % of their edges at the reference cap**, "
-          "the worst being " + ", ".join(f"{c}/{n} {v:.0%}" for (c, n), v in big.head(8).items()) +
-          ". Tied edges cannot be told apart by the Potts term, so the "
-          "re-zoning signal there is flattened, not only rescaled. Diagnostic variant "
-          "`dp_n_baseline_ownclip` (persisted, not used by default): clip at the scenario's "
-          "own 99th percentile and divide by the reference mean. Severity is kept, and only "
-          "1 % of edges are capped:")
-        a("")
-        a(f"![severity ownclip]({_rel(f_sev_own)})")
-        a("")
-    a("<details><summary>Pinned share per country and scenario</summary>")
+    a(f"![severity refclip]({_rel(f_sev_ref)})")
+    a("")
+    a("<details><summary>Pinned share per country and scenario (baseline_refclip)</summary>")
     a("")
     a(_md(above.T, 3))
     a("")
@@ -421,9 +424,9 @@ def write_scenarios(out: dict, cfg: dict) -> None:
     a("")
     a("</details>")
     a("")
-    a("Countries with no congestion signal (country mean of the raw statistic below "
-      f"`edges.signal_min` = {e.get('signal_min', 0.01)}) per scenario. Their dp̃ is noise "
-      "amplified by a small divisor under `self`. Under `baseline` it is ≈ 0, as it should be:")
+    a("Per scenario, countries whose *scenario* statistic has no congestion signal (country "
+      f"mean below `edges.signal_min` = {e.get('signal_min', 0.01)}). Under `self` their dp̃ is "
+      "noise amplified by a small divisor:")
     a("")
     for n in names:
         a(f"- `{n}`: {', '.join(no_sig[n]) or '—'}")
@@ -440,9 +443,36 @@ def write_scenarios(out: dict, cfg: dict) -> None:
     write_text(REPORTS / "ndbz_scenarios.md", "\n".join(L) + "\n")
 
 
+def anchor_table(cfg: dict) -> pd.DataFrame:
+    """Per-country anchor summary (k, zone sizes, capacity, Z_c) + the Z_c bar chart."""
+    from bzgen.cluster import graphs
+    from bzgen.ndbz import anchor as AN, rigidity as R
+    anc = AN.anchors(cfg)
+    df = AN.summary(anc)
+    buses = pd.read_csv(config.ROOT / "data" / "interim" / "buses.csv", index_col=0)
+    ed = pd.read_parquet(config.ROOT / "results" / "edges.parquet")
+    zero = pd.Series(0.0, index=buses.index)
+    med = {}
+    for c, a in anc.items():
+        if a.skip:
+            continue
+        g = graphs.build(c, buses, ed, 1.0, zero, zero)[0]
+        med[c] = float(np.median(R.single_move_deltas(a.A, a.cap, a.k, g.ptr, g.idx, a.Z)))
+    df["median_single_move_dH_rigid"] = pd.Series(med)
+    df["rigidity_impl"] = R.SOURCE
+    df = df.sort_values("n_nodes", ascending=False)
+    write_csv(results_dir(cfg) / "anchor.csv", df)
+    plots.bars(df.Z_c, figures_dir(cfg) / "Z_c.png", "Rigidity normaliser Z_c = (2 n_c / k_c) · ḡ_c",
+               "Z_c (MW, log scale)", log=True,
+               note=f"median normalised single-move ΔH_rigid at B = A: "
+                    f"{df.median_single_move_dH_rigid.min():.2f}–{df.median_single_move_dH_rigid.max():.2f} "
+                    "across countries (O(1) by construction)")
+    return df
+
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("what", choices=["scenarios"])
+    ap.add_argument("what", choices=["scenarios", "anchor"])
     args = ap.parse_args()
     cfg = load_config()
     log = lambda s: print(time.strftime("%H:%M:%S"), s, flush=True)
@@ -451,6 +481,8 @@ def main():
         persist(out, cfg)
         write_scenarios(out, cfg)
         log("wrote reports/ndbz_scenarios.md")
+    if args.what == "anchor":
+        print(anchor_table(cfg).round(3).to_string())
 
 
 if __name__ == "__main__":

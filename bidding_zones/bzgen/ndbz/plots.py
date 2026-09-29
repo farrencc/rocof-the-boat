@@ -102,3 +102,21 @@ def dpn_ecdf(tables: dict, countries: list[str], fn, title: str):
     fig.tight_layout()
     savefig(fig, fn, dpi=150)
     plt.close(fig)
+
+
+def bars(values: pd.Series, fn, title: str, ylabel: str, log: bool = False, note: str = ""):
+    """Single-series bar chart (one hue, no legend: the title names the series)."""
+    fig, ax = plt.subplots(figsize=(0.28 * len(values) + 1.8, 3.0))
+    _style(ax)
+    ax.grid(axis="x", visible=False)
+    ax.bar(np.arange(len(values)), values.to_numpy(float), width=0.7, color=SERIES[0], lw=0)
+    ax.set_xticks(np.arange(len(values)), values.index, fontsize=7, rotation=90, color=INK2)
+    if log:
+        ax.set_yscale("log")
+    ax.set_ylabel(ylabel, fontsize=7, color=INK2)
+    ax.set_title(title, fontsize=9, color=INK, loc="left")
+    if note:
+        ax.text(0.0, -0.32, note, transform=ax.transAxes, fontsize=6.5, color=INK2, va="top")
+    fig.tight_layout()
+    savefig(fig, fn, dpi=150)
+    plt.close(fig)

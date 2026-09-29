@@ -262,8 +262,10 @@ def test_baseline_normalisation_keeps_severity(inp):
 
 @pytest.mark.parametrize("remedy", ["none", "clip", "log1p", "rank"])
 def test_rescaling_dp(inp, remedy):
-    """Rescale every scenario dp by c.  baseline: dp~ scales by c (remedy none; with a
-    remedy it is monotone, and at least not invariant).  self: mean 1, invariant."""
+    """Rescale every scenario dp by c.  baseline: dp~ scales exactly by c for the
+    scale-equivariant remedies (none, and clip at the scenario's own quantile); for
+    log1p / rank (parameters frozen on the reference) it is monotone and not
+    invariant.  self: mean 1 and invariant."""
     cfg = _cfg(dp_remedy=remedy)
     stat = S.STAT_COL[cfg["edges"]["statistic"]]
     ref = S.reference_stats(inp, cfg)
@@ -273,15 +275,44 @@ def test_rescaling_dp(inp, remedy):
     st2[stat] = st2[stat] * c
     n1 = S.normalise(st, ref.loc[st.index], cfg, "baseline")
     n2 = S.normalise(st2, ref.loc[st.index], cfg, "baseline")
-    if remedy == "none":
+    if remedy in ("none", "clip"):
         np.testing.assert_allclose(n2.dp_n.to_numpy(), c * n1.dp_n.to_numpy(), rtol=1e-12)
     else:
         assert not np.allclose(n2.dp_n.to_numpy(), n1.dp_n.to_numpy())
         assert (n2.dp_n.to_numpy() <= n1.dp_n.to_numpy() + 1e-12).all()
+    # baseline_refclip (the original specification): monotone, not invariant
+    r1 = S.normalise(st, ref.loc[st.index], cfg, "baseline_refclip")
+    r2 = S.normalise(st2, ref.loc[st.index], cfg, "baseline_refclip")
+    assert not np.allclose(r2.dp_n.to_numpy(), r1.dp_n.to_numpy())
+    assert (r2.dp_n.to_numpy() <= r1.dp_n.to_numpy() + 1e-12).all()
     s1 = S.normalise(st, ref.loc[st.index], cfg, "self")
     s2 = S.normalise(st2, ref.loc[st.index], cfg, "self")
     np.testing.assert_allclose(s2.dp_n.to_numpy(), s1.dp_n.to_numpy(), rtol=1e-9, atol=1e-12)
     np.testing.assert_allclose(s1.groupby("country").dp_n.mean().to_numpy(), 1.0, rtol=1e-12)
+
+
+def test_refclip_pins_edges_and_baseline_does_not(inp):
+    cfg = _cfg()
+    stat = S.STAT_COL[cfg["edges"]["statistic"]]
+    ref = S.reference_stats(inp, cfg)
+    st = S.scenario_stats(inp, S.select(inp, "peak_demand", cfg, "country"), cfg)
+    st[stat] = st[stat] * 3.0 + 0.05 * np.arange(len(st)) / len(st)   # much more congested, no ties
+    n = S.normalise(st, ref.loc[st.index], cfg, "baseline")
+    for c, g in n.groupby("country"):
+        top = g.dp_n_baseline_refclip.max()
+        assert (g.dp_n_baseline_refclip == top).mean() >= (g.above_ref_clip.mean() - 1e-12)
+        # own-quantile clip: at most the top (1 - q) share is capped
+        assert (g.dp_n_baseline >= g.dp_n_baseline.max() - 1e-12).mean() <= 0.5
+
+
+def test_no_signal_flag(inp):
+    cfg = _cfg()
+    stat = S.STAT_COL[cfg["edges"]["statistic"]]
+    ref = S.reference_stats(inp, cfg)
+    quiet = ref.copy()
+    quiet.loc[quiet.country == "BB", stat] = 1e-4
+    n = S.normalise(ref, quiet, cfg, "baseline")
+    assert n[n.country == "BB"].no_signal.all() and not n[n.country == "AA"].no_signal.any()
 
 
 # --------------------------------------------------------------------------- #
@@ -332,3 +363,246 @@ def test_persisted_baseline_reproduces_static_edges():
     others = t[(t.scenario != "baseline") & (t.clip_handling == "as_is") & (t.scope == "country")]
     means = others.groupby(["scenario", "country"]).dp_n_self.mean()
     np.testing.assert_allclose(means[means > 0].to_numpy(), 1.0, rtol=1e-9)
+
+
+# --------------------------------------------------------------------------- #
+# tests 5-7: rigidity (active implementation and the fallback copy)
+# --------------------------------------------------------------------------- #
+
+from bzgen.ndbz import _rigidity_core, balance_floor, rigidity as R
+
+IMPLS = [R, _rigidity_core]
+
+
+def _symdiff_reference(B, A, cap):
+    """sum_i g_i |BZ_B(i) symdiff BZ_A(i)|, straight from the definition."""
+    n = len(B)
+    s = 0.0
+    for i in range(n):
+        zb = B == B[i]
+        za = A == A[i]
+        s += cap[i] * np.sum(zb ^ za)
+    return s
+
+
+def _caps(kind, n, rng):
+    if kind == "ones":
+        return np.ones(n)
+    c = rng.exponential(300.0, n)
+    c[rng.random(n) < 0.4] = 0.0
+    return c
+
+
+@pytest.mark.parametrize("impl", IMPLS, ids=lambda m: m.__name__.split(".")[-1])
+@pytest.mark.parametrize("kind", ["ones", "random_with_zeros"])
+def test_rigidity_incremental_single_moves(impl, kind):
+    rng = np.random.default_rng(11)
+    n, k = 60, 5
+    A = rng.integers(0, k, n).astype(np.int64)
+    B = rng.integers(0, k, n).astype(np.int64)
+    cap = _caps(kind, n, rng)
+    assert impl.rigidity_full(B, A, cap, k, k) == pytest.approx(_symdiff_reference(B, A, cap))
+    t = impl.build_tables(B, A, cap, k, k)
+    H = impl.rigidity_full(B, A, cap, k, k)
+    for _ in range(4000):
+        i = int(rng.integers(n))
+        p, q = int(B[i]), int(rng.integers(k))
+        d = impl.rigidity_delta(p, q, int(A[i]), float(cap[i]), *t)
+        impl.rigidity_apply(p, q, int(A[i]), float(cap[i]), *t) if p != q else None
+        B[i] = q
+        H += d
+    full = impl.rigidity_full(B, A, cap, k, k)
+    assert H == pytest.approx(full, rel=1e-9, abs=1e-6)
+    assert impl.rigidity_from_tables(*t) == pytest.approx(full, rel=1e-12, abs=1e-9)
+    assert full == pytest.approx(_symdiff_reference(B, A, cap))
+
+
+@pytest.mark.parametrize("impl", IMPLS, ids=lambda m: m.__name__.split(".")[-1])
+@pytest.mark.parametrize("kind", ["ones", "random_with_zeros"])
+def test_rigidity_incremental_fragment_moves(impl, kind):
+    rng = np.random.default_rng(12)
+    n, k = 60, 5
+    A = rng.integers(0, k, n).astype(np.int64)
+    B = rng.integers(0, k, n).astype(np.int64)
+    cap = _caps(kind, n, rng)
+    t = impl.build_tables(B, A, cap, k, k)
+    H = impl.rigidity_full(B, A, cap, k, k)
+    fa = np.zeros(k, np.int64)
+    fn = np.zeros(k, np.int64)
+    fg = np.zeros(k)
+    for _ in range(1500):
+        p = int(rng.integers(k))
+        pool = np.flatnonzero(B == p)
+        if len(pool) == 0:
+            continue
+        members = rng.choice(pool, size=int(rng.integers(1, len(pool) + 1)), replace=False).astype(np.int64)
+        q = int(rng.integers(k))
+        m, NF, GF = impl.fragment_profile(members, A, cap, fa, fn, fg)
+        d = impl.rigidity_delta_fragment(p, q, fa, m, fn, fg, NF, GF, *t)
+        if p != q:
+            impl.rigidity_apply_fragment(p, q, fa, m, fn, fg, NF, GF, *t)
+        impl.fragment_clear(fa, m, fn, fg)
+        B[members] = q
+        H += d
+    assert (fn == 0).all() and (fg == 0).all()
+    full = impl.rigidity_full(B, A, cap, k, k)
+    assert H == pytest.approx(full, rel=1e-9, abs=1e-6)
+    assert impl.rigidity_from_tables(*t) == pytest.approx(full, rel=1e-12, abs=1e-9)
+
+
+@pytest.mark.parametrize("impl", IMPLS, ids=lambda m: m.__name__.split(".")[-1])
+def test_rigidity_known_values(impl):
+    rng = np.random.default_rng(13)
+    A = rng.integers(0, 4, 50).astype(np.int64)
+    cap = _caps("random_with_zeros", 50, rng)
+    assert impl.rigidity_full(A, A, cap, 4, 4) == 0.0
+    # label invariance: permuting B's labels changes nothing (no matching needed)
+    B = rng.integers(0, 4, 50).astype(np.int64)
+    perm = np.array([2, 0, 3, 1])
+    assert impl.rigidity_full(perm[B], A, cap, 4, 4) == pytest.approx(impl.rigidity_full(B, A, cap, 4, 4))
+    # two-zone toy, by hand:
+    #   A = {0,1}{2,3}, B = {0}{1,2,3}, g = (1, 2, 0, 3)
+    #   node 0: A-zone {0,1}, B-zone {0}      -> {1}      -> 1 x 1 = 1
+    #   node 1: A-zone {0,1}, B-zone {1,2,3}  -> {0,2,3}  -> 3 x 2 = 6
+    #   node 2: g = 0                                        -> 0
+    #   node 3: A-zone {2,3}, B-zone {1,2,3}  -> {1}      -> 1 x 3 = 3
+    A2 = np.array([0, 0, 1, 1], np.int64)
+    B2 = np.array([0, 1, 1, 1], np.int64)
+    g2 = np.array([1.0, 2.0, 0.0, 3.0])
+    assert impl.rigidity_full(B2, A2, g2, 2, 2) == pytest.approx(10.0)
+    # load-only buses are counted inside the other terms: g_2 = 0, yet moving node 2
+    # alone changes the penalty
+    B3 = np.array([0, 0, 0, 1], np.int64)
+    assert impl.rigidity_full(B3, A2, g2, 2, 2) > 0
+
+
+def test_rigidity_source_is_reported():
+    assert R.SOURCE in ("bzgen.dbz.rigidity", "bzgen.ndbz._rigidity_core")
+
+
+# --------------------------------------------------------------------------- #
+# test 8: Z_c normalisation
+# --------------------------------------------------------------------------- #
+
+def _country_like(n, k, seed):
+    import networkx as nx
+    from bzgen.cluster.anneal import CountryGraph, graph_voronoi
+    G = nx.random_geometric_graph(n, 1.6 / np.sqrt(n), seed=seed)
+    comps = list(nx.connected_components(G))
+    for a, b in zip(comps[:-1], comps[1:]):
+        G.add_edge(next(iter(a)), next(iter(b)))
+    e = np.array(G.edges())
+    rng = np.random.default_rng(seed)
+    g = CountryGraph(n, e[:, 0], e[:, 1], np.zeros(len(e)), np.ones(n), np.ones(n))
+    A = graph_voronoi(g, k, rng)
+    cap = rng.exponential(400.0, n) * (rng.random(n) < 0.7)
+    return g, A, cap
+
+
+def test_normaliser_makes_moves_comparable_synthetic():
+    med = []
+    for n, k in ((25, 3), (800, 3), (300, 6)):
+        g, A, cap = _country_like(n, k, seed=n)
+        Z, gbar, flagged = R.normaliser(cap, k)
+        assert not flagged and Z == pytest.approx(2 * n / k * cap.mean())
+        med.append(np.median(R.single_move_deltas(A, cap, k, g.ptr, g.idx, Z)))
+    assert max(med) / min(med) < 3.0, med
+    # raw (unnormalised) costs differ by an order of magnitude, which is why Z_c exists
+    Z, gbar, _ = R.normaliser(np.zeros(10), 3)
+    assert gbar == 1.0 and Z == pytest.approx(2 * 10 / 3)
+
+
+DATA = (config.ROOT / "data" / "interim" / "buses.csv").exists()
+needs_data = pytest.mark.skipif(not DATA, reason="data/interim not built (gitignored)")
+
+
+@pytest.fixture(scope="module")
+def real_anchors():
+    from bzgen.ndbz import anchor as AN
+    return AN.anchors(load_config())
+
+
+@needs_data
+def test_normaliser_real_countries(real_anchors):
+    from bzgen.cluster import graphs
+    buses = pd.read_csv(config.ROOT / "data" / "interim" / "buses.csv", index_col=0)
+    ed = pd.read_parquet(config.ROOT / "results" / "edges.parquet")
+    zero = pd.Series(0.0, index=buses.index)
+    med = {}
+    for c, a in real_anchors.items():
+        if a.skip:
+            continue
+        g = graphs.build(c, buses, ed, 1.0, zero, zero)[0]
+        med[c] = np.median(R.single_move_deltas(a.A, a.cap, a.k, g.ptr, g.idx, a.Z))
+    big = max(real_anchors, key=lambda c: real_anchors[c].info["n_nodes"])
+    small = min(real_anchors, key=lambda c: real_anchors[c].info["n_nodes"])
+    assert max(med[big], med[small]) / min(med[big], med[small]) < 3.0
+    assert max(med.values()) / min(med.values()) < 3.0, med
+
+
+# --------------------------------------------------------------------------- #
+# test 9: anchor
+# --------------------------------------------------------------------------- #
+
+@needs_data
+def test_anchor(real_anchors):
+    from bzgen.cluster import graphs
+    from bzgen.cluster.anneal import zone_components
+    from bzgen.ndbz import anchor as AN
+    cfg = load_config()
+    sweep = pd.read_csv(config.ROOT / "results" / "sweep.csv")
+    rows = sweep[sweep.config_id == cfg["ndbz"]["anchor_config_id"]].set_index("country")
+    labels = AN.load_labels(cfg)
+    buses = pd.read_csv(config.ROOT / "data" / "interim" / "buses.csv", index_col=0)
+    ed = pd.read_parquet(config.ROOT / "results" / "edges.parquet")
+    zero = pd.Series(0.0, index=buses.index)
+    n_nodes = n_iso = 0
+    for c, a in real_anchors.items():
+        assert a.k == int(rows.loc[c, "k"]) == labels[labels.country == c].zone.nunique()
+        g, nodes, host, _ = graphs.build(c, buses, ed, 1.0, zero, zero)
+        assert a.nodes == nodes and a.host == host
+        assert (zone_components(a.A, a.k, g.ptr, g.idx) == 1).all()
+        # the isolated buses take their host's zone, exactly as the static pipeline did
+        lab = labels[labels.country == c].set_index("bus").zone
+        back = AN.attach_isolated(pd.Series(np.array(a.zone_ids)[a.A], index=nodes), host)
+        assert back.sort_index().equals(lab.sort_index())
+        n_nodes += len(nodes)
+        n_iso += len(host)
+        assert a.skip is None or a.k == 1
+    assert n_nodes + n_iso == len(labels) == len(buses)
+    assert n_iso == 8                          # "isolated within their country", graphs.py
+
+
+def test_anchor_k1_is_skipped():
+    from bzgen.cluster.anneal import CountryGraph
+    from bzgen.ndbz import anchor as AN
+    buses = pd.DataFrame({"country": "ZZ", "cluster_country": "ZZ", "x": [0.0, 1.0, 2.0],
+                          "y": [50.0, 50.0, 50.0]}, index=["b0", "b1", "b2"])
+    g = CountryGraph(3, np.array([0, 1]), np.array([1, 2]), np.zeros(2), np.ones(3), np.ones(3))
+    labels = pd.DataFrame({"bus": ["b0", "b1", "b2"], "zone": [7, 7, 7], "country": "ZZ"})
+    a = AN.country_anchor("ZZ", labels, buses, None, pd.Series(1.0, index=buses.index), 1,
+                          g=g, nodes=["b0", "b1", "b2"], host={})
+    assert a.k == 1 and a.skip and a.skip.startswith("k_c = 1")
+    with pytest.raises(AssertionError):           # k disagreeing with sweep.csv fails loudly
+        AN.country_anchor("ZZ", labels, buses, None, pd.Series(1.0, index=buses.index), 3,
+                          g=g, nodes=["b0", "b1", "b2"], host={})
+    bad = labels.assign(zone=[0, 1, 0])           # non-contiguous A fails loudly
+    with pytest.raises(AssertionError):
+        AN.country_anchor("ZZ", bad, buses, None, pd.Series(1.0, index=buses.index), 2,
+                          g=g, nodes=["b0", "b1", "b2"], host={})
+
+
+# --------------------------------------------------------------------------- #
+# test 10: balance floor
+# --------------------------------------------------------------------------- #
+
+def test_balance_floor_parameterisations_agree_at_k3():
+    cfg = load_config()
+    static = config.load()
+    assert "balance_floor_frac_of_mean" not in static["anneal"]      # static config unchanged
+    assert balance_floor(cfg["anneal"], 3) == pytest.approx(static["anneal"]["balance_floor"])
+    assert balance_floor(static["anneal"], 3) == static["anneal"]["balance_floor"]
+    assert balance_floor(static["anneal"], 5) == static["anneal"]["balance_floor"]
+    assert balance_floor({**cfg["anneal"], "balance_floor_frac_of_mean": None}, 2) == \
+        static["anneal"]["balance_floor"]
+    assert balance_floor(cfg["anneal"], 2) == pytest.approx(0.075)
