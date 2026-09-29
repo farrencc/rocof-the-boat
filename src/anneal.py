@@ -45,24 +45,26 @@ class AnnealConfig:
     hot_accept_prob: float = 0.5
     cold_accept_prob: float = 1e-3
     p_flip: float = 0.5
+    min_group_size: int = 1             # hard floor: moves that shrink a group below it are redrawn
     seed: int = 0
     max_temperature_steps: int = 2000   # safety cap on the geometric schedule
 
 
-def propose(M: np.ndarray, rng: np.random.Generator, p_flip: float) -> np.ndarray:
+def propose(M: np.ndarray, rng: np.random.Generator, p_flip: float, min_size: int = 1) -> np.ndarray:
     N, K = M.shape
+    floor = max(1, int(min_size))
     sizes = M.sum(axis=0)
     while True:
         if K == 1 or rng.random() < p_flip:
             i, k = int(rng.integers(N)), int(rng.integers(K))
-            if M[i, k] and sizes[k] == 1:
-                continue  # would empty group k
+            if M[i, k] and sizes[k] <= floor:
+                continue  # would empty group k / break the minimum size
             C = M.copy()
             C[i, k] = not C[i, k]
             return C
         k1, k2 = (int(x) for x in rng.choice(K, size=2, replace=False))
-        if sizes[k1] == 1:
-            continue  # moving its only member would empty k1
+        if sizes[k1] <= floor:
+            continue  # would empty k1 / break the minimum size
         cand = np.flatnonzero(M[:, k1] & ~M[:, k2])
         if len(cand) == 0:
             continue
@@ -81,7 +83,7 @@ def estimate_temperature_range(H, M, E, rng, cfg: AnnealConfig):
     """
     dEs = []
     for _ in range(cfg.n_temperature_samples):
-        C = propose(M, rng, cfg.p_flip)
+        C = propose(M, rng, cfg.p_flip, cfg.min_group_size)
         rec = H(C)
         if np.isfinite(rec["E"]):
             dE = abs(rec["E"] - E)
@@ -119,8 +121,9 @@ def _pack(rec):
 
 def _unpack(v):
     v = np.asarray(v, float)
+    n = (len(v) - 4) // 2
     return dict(E=float(v[0]), D=float(v[1]), security_pct=float(v[2]), feasible=bool(v[3]),
-                raw=v[4:9], z=v[9:14])
+                raw=v[4:4 + n], z=v[4 + n:4 + 2 * n])
 
 
 def anneal(H, M0: np.ndarray, cfg: AnnealConfig, out_dir: Path, log=print) -> dict:
@@ -179,7 +182,7 @@ def anneal(H, M0: np.ndarray, cfg: AnnealConfig, out_dir: Path, log=print) -> di
         step += 1
         accepted = improved = infeasible = 0
         for _ in range(cfg.sweeps_per_temp):
-            C = propose(M, rng, cfg.p_flip)
+            C = propose(M, rng, cfg.p_flip, cfg.min_group_size)
             rec = H(C)
             calls += 1
             if not rec["feasible"]:

@@ -27,7 +27,14 @@ T5(G0) = 0 by construction (G0 holds only helpful-sign nodes) and T2 is negative
 The probe's D(G) ignores the security guard (random groupings are mostly
 infeasible, but their D is still a valid scale).
 
-    E = lam_DD*T1' + lam_S*T2' + lam_V*T3' + lam_N*T4' + lam_P*T5'
+  T6  conv     C(G): conventional down-regulation MW used for network relief,
+               as % of weighted renewable potential (v2 cases only; 0 otherwise).
+               D(G) stays renewable-only, so without T6 conventional plant is free.
+
+    E = lam_DD*T1' + lam_S*T2' + lam_V*T3' + lam_N*T4' + lam_P*T5' + lam_C*T6'
+
+With conventional nodes the MEC weight m_i of a conventional unit is its
+down-room p_nom - p_min.
 
 The upstream security guard is kept: a candidate that makes any snapshot of any
 training member insecure that was secure under the baseline (multi-membership
@@ -39,7 +46,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-TERMS = ("DD", "S", "V", "N", "P")
+TERMS = ("DD", "S", "V", "N", "P", "C")
 
 
 def structural_terms(M: np.ndarray, sigma: np.ndarray, mec: np.ndarray) -> np.ndarray:
@@ -72,18 +79,19 @@ def group_stats(M: np.ndarray, sigma: np.ndarray, mec: np.ndarray) -> list[dict]
     return out
 
 
-def random_membership(rng: np.random.Generator, N: int, density: np.ndarray) -> np.ndarray:
+def random_membership(rng: np.random.Generator, N: int, density: np.ndarray, min_size: int = 1) -> np.ndarray:
     M = rng.random((N, len(density))) < density[None, :]
     for k in range(M.shape[1]):
-        if not M[:, k].any():
-            M[rng.integers(N), k] = True
+        short = max(min_size, 1) - int(M[:, k].sum())
+        if short > 0:
+            M[rng.choice(np.flatnonzero(~M[:, k]), size=short, replace=False), k] = True
     return M
 
 
 @dataclass
 class Normaliser:
-    offset: np.ndarray   # raw terms at G0 (5,)
-    scale: np.ndarray    # probe sd (5,)
+    offset: np.ndarray   # raw terms at G0
+    scale: np.ndarray    # probe sd
     probe: np.ndarray    # R x 5 raw probe terms, kept for the record
 
 
@@ -93,29 +101,33 @@ class Hamiltonian:
         self.sigma = np.asarray(sigma, float)
         self.mec = np.asarray(mec, float)
         self.lam = np.asarray(lambdas, float)
-        assert self.lam.shape == (5,)
+        if self.lam.shape == (5,):
+            self.lam = np.r_[self.lam, 0.0]
+        assert self.lam.shape == (len(TERMS),)
         self.norm = normaliser
 
     @staticmethod
-    def build_normaliser(ens, sigma, mec, M0: np.ndarray, n_probe: int = 64, seed: int = 12345) -> Normaliser:
+    def build_normaliser(ens, sigma, mec, M0: np.ndarray, n_probe: int = 64, seed: int = 12345,
+                         min_size: int = 1) -> Normaliser:
         rng = np.random.default_rng(seed)
         density = M0.mean(axis=0)
 
         def raw(M):
-            return np.concatenate([[ens(M)["D"]], structural_terms(M, sigma, mec)])
+            ev = ens(M)
+            return np.concatenate([[ev["D"]], structural_terms(M, sigma, mec), [ev.get("C", 0.0)]])
 
-        probe = np.array([raw(random_membership(rng, M0.shape[0], density)) for _ in range(n_probe)])
+        probe = np.array([raw(random_membership(rng, M0.shape[0], density, min_size)) for _ in range(n_probe)])
         scale = probe.std(axis=0, ddof=1)
         scale = np.where(scale > 1e-12, scale, 1.0)
         return Normaliser(offset=raw(M0), scale=scale, probe=probe)
 
     def evaluate(self, M: np.ndarray) -> dict:
         ev = self.ens(M)
-        raw = np.concatenate([[ev["D"]], structural_terms(M, self.sigma, self.mec)])
+        raw = np.concatenate([[ev["D"]], structural_terms(M, self.sigma, self.mec), [ev.get("C", 0.0)]])
         z = (raw - self.norm.offset) / self.norm.scale
         contrib = self.lam * z
         E = float(contrib.sum()) if ev["feasible"] else float("inf")
-        return dict(E=E, D=ev["D"], raw=raw, z=z, contrib=contrib, feasible=ev["feasible"],
+        return dict(E=E, D=ev["D"], C=ev.get("C", 0.0), raw=raw, z=z, contrib=contrib, feasible=ev["feasible"],
                     new_failures=ev["new_failures"], security_pct=ev["security_pct"])
 
     __call__ = evaluate

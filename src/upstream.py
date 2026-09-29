@@ -142,3 +142,6 @@ def land_outlines() -> list[np.ndarray]:
     for f in gj.get("features", [gj]):
         add(f.get("geometry", f))
     return rings
+
+
+_synthetic_renewable_potential = _api._synthetic_renewable_potential

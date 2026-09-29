@@ -44,7 +44,32 @@ FIGURES = REPO / "figures"
 BASE = (1.0, 0.5, 0.5, 0.5, 0.5)
 
 
-def sweep_configs() -> list[tuple[str, tuple]]:
+# v2 lambda order: (DD, S, V, N, P, C). Base relaxes the size coupling to 0.1 (with a hard
+# 5-node floor) and prices conventional redispatch at 0.5.
+BASE_V2 = (1.0, 0.5, 0.5, 0.1, 0.5, 0.5)
+V2_MIN_GROUP_SIZE = 5
+V2_THERMAL_SCALES = (1.0, 0.95, 0.90)
+
+
+def sweep_configs_v2() -> list[tuple[str, tuple]]:
+    cfgs = [("d00_dd_only", (1.0, 0, 0, 0, 0, 0)), ("d01_dd_conv", (1.0, 0, 0, 0, 0, 1.0)),
+            ("d02_base", BASE_V2)]
+    n = 3
+    grid = {"N": (0.0, 0.05, 0.25), "C": (0.0, 2.0), "S": (0.0, 2.0), "V": (0.0, 2.0), "P": (0.0, 2.0)}
+    for t, vals in grid.items():
+        j = TERMS.index(t)
+        for v in vals:
+            lam = list(BASE_V2)
+            lam[j] = v
+            cfgs.append((f"d{n:02d}_{t}{v:g}", tuple(lam)))
+            n += 1
+    cfgs.append((f"d{n:02d}_structural_only", (0.0, 1.0, 1.0, 0.1, 1.0, 1.0)))
+    return cfgs
+
+
+def sweep_configs(version: str = "v1") -> list[tuple[str, tuple]]:
+    if version == "v2":
+        return sweep_configs_v2()
     cfgs = [("c00_dd_only", (1.0, 0, 0, 0, 0)), ("c01_base", BASE)]
     n = 2
     for j, t in enumerate(TERMS):
@@ -74,21 +99,44 @@ def sweep_configs() -> list[tuple[str, tuple]]:
 class Problem:
     """Everything a configuration needs, built once per scope."""
 
-    def __init__(self, scope: str = "26"):
+    def __init__(self, scope: str = "26", version: str = "v1"):
         self.scope = scope
+        self.version = version
         self.grid = up.load_grid(scope)
-        self.mec = self.grid.template.mec_mw.to_numpy(float)
         self.M_wdt, self.wdt_ids = wdt_membership(self.grid.template)
         self.M_excl, self.excl_ids = labels_to_membership(up.exclusive_group_ids(self.grid))
-        self.ens = build_ensemble(self.grid, A.ANCHOR_SEEDS, A.THERMAL_SCALES)
+        if version == "v1":
+            self.root = RESULTS
+            setup = RESULTS / f"setup_{scope}"
+            self.min_size = 1
+            self.ens = build_ensemble(self.grid, A.ANCHOR_SEEDS, A.THERMAL_SCALES)
+            self.mec = self.grid.template.mec_mw.to_numpy(float)
+            self.nodes = None
+        else:
+            from cases import build_cases_v2, node_table
+            self.root = RESULTS / f"v2_{scope}"
+            setup = self.root / "setup"
+            self.min_size = V2_MIN_GROUP_SIZE
+            self.thermal_scales = V2_THERMAL_SCALES
+            self.builder = lambda g, s, ts: build_cases_v2(g, s, ts)
+            self.ens = build_ensemble(self.grid, A.ANCHOR_SEEDS, V2_THERMAL_SCALES, builder=self.builder)
+            self.nodes = node_table(self.grid, self.ens.members[0].cases)
+            self.mec = self.nodes.capacity_mw.to_numpy(float)
+            pad = len(self.nodes) - self.M_wdt.shape[0]   # WDT groups contain no conventional units
+            self.M_wdt = np.vstack([self.M_wdt, np.zeros((pad, self.M_wdt.shape[1]), bool)])
+            self.M_excl = np.vstack([self.M_excl, np.zeros((pad, self.M_excl.shape[1]), bool)])
+        self.setup = setup
         self.ens.set_baseline(self.M_wdt)
-        setup = RESULTS / f"setup_{scope}"
         if (setup / "anchors.npz").exists():
             meta = A.load_anchors(setup)
             self.anchor_meta = meta
             self.sigma, self.M0 = meta["sigma"], meta["init_membership"]
         else:
-            a = A.select_anchors(self.grid, self.ens, self.M_wdt)
+            if version == "v1":
+                a = A.select_anchors(self.grid, self.ens, self.M_wdt)
+            else:
+                a = A.select_anchors(self.grid, self.ens, self.M_wdt, min_share=0.01,
+                                     min_size=self.min_size, repair=True)
             A.save_anchors(a, setup)
             self.anchor_meta = A.load_anchors(setup)
             self.sigma, self.M0 = a.sigma, a.init_membership
@@ -97,9 +145,10 @@ class Problem:
             z = np.load(npath)
             self.norm = Normaliser(z["offset"], z["scale"], z["probe"])
         else:
-            self.norm = Hamiltonian.build_normaliser(self.ens, self.sigma, self.mec, self.M0)
+            self.norm = Hamiltonian.build_normaliser(self.ens, self.sigma, self.mec, self.M0,
+                                                     min_size=self.min_size)
             np.savez(npath, offset=self.norm.offset, scale=self.norm.scale, probe=self.norm.probe,
-                     terms=np.array(TERMS))
+                     terms=np.array(TERMS[:len(self.norm.offset)]))
             (setup / "normaliser.json").write_text(json.dumps(
                 dict(terms=TERMS, offset_at_init=self.norm.offset.tolist(), probe_sd=self.norm.scale.tolist(),
                      probe_mean=self.norm.probe.mean(0).tolist(), n_probe=len(self.norm.probe)), indent=2))
@@ -109,7 +158,7 @@ class Problem:
 
     def describe(self, M) -> dict:
         ev = self.ens(M)
-        return dict(D=ev["D"], feasible=ev["feasible"], new_failures=ev["new_failures"],
+        return dict(D=ev["D"], C=ev.get("C", 0.0), feasible=ev["feasible"], new_failures=ev["new_failures"],
                     security_pct=ev["security_pct"],
                     raw_terms=dict(zip(TERMS[1:], structural_terms(M, self.sigma, self.mec).tolist())),
                     sizes=M.sum(0).tolist(), covered=int((M.sum(1) > 0).sum()), overlap=int((M.sum(1) > 1).sum()))
@@ -120,7 +169,7 @@ _PROBLEM: Problem | None = None
 
 def run_config(config_id: str, lambdas, cfg: AnnealConfig) -> dict:
     """Worker entry point. Never raises: errors are logged and reported."""
-    out = RESULTS / config_id
+    out = _PROBLEM.root / config_id
     out.mkdir(parents=True, exist_ok=True)
     logf = open(out / "run.log", "a")
 
@@ -141,6 +190,7 @@ def run_config(config_id: str, lambdas, cfg: AnnealConfig) -> dict:
             rec = res[key]
             M = res[f"{key}_M"]
             final[tag] = dict(E=rec["E"], D=rec["D"], security_pct=rec["security_pct"],
+                              C=float(rec["raw"][5]) if len(rec["raw"]) > 5 else 0.0,
                               raw=dict(zip(TERMS, rec["raw"].tolist())), z=dict(zip(TERMS, rec["z"].tolist())),
                               groups=group_stats(M, P.sigma, P.mec), sizes=M.sum(0).tolist(),
                               covered=int((M.sum(1) > 0).sum()), overlap=int((M.sum(1) > 1).sum()))
@@ -148,7 +198,7 @@ def run_config(config_id: str, lambdas, cfg: AnnealConfig) -> dict:
         (out / "summary.json").write_text(json.dumps(final, indent=2, default=float))
         try:
             import plots
-            plots.config_plots(out, title=f"{config_id}  lam(DD,S,V,N,P)={tuple(lambdas)}")
+            plots.config_plots(out, title=f"{config_id}  lambda{tuple(TERMS[:len(lambdas)])}={tuple(lambdas)}")
         except Exception:  # plots must not lose a finished run
             log("plotting failed:\n" + traceback.format_exc())
         log(f"[{config_id}] done in {time.time() - t0:.1f}s")
@@ -186,23 +236,24 @@ def main(argv=None):
     ap.add_argument("--alpha", type=float, default=AnnealConfig.alpha)
     ap.add_argument("--sweeps", type=int, default=AnnealConfig.sweeps_per_temp)
     ap.add_argument("--no-commit", action="store_true")
+    ap.add_argument("--version", default="v2", choices=["v1", "v2"])
     args = ap.parse_args(argv)
 
     global _PROBLEM
     t = time.time()
-    _PROBLEM = Problem(args.scope)
-    print(f"setup {time.time() - t:.1f}s; anchors={_PROBLEM.anchor_meta['branches']} "
-          f"init sizes={_PROBLEM.M0.sum(0).tolist()}", flush=True)
+    _PROBLEM = P = Problem(args.scope, args.version)
+    print(f"setup {time.time() - t:.1f}s; anchors={P.anchor_meta['branches']} "
+          f"init sizes={P.M0.sum(0).tolist()}", flush=True)
     if not args.no_commit:
-        git_commit([RESULTS / f"setup_{args.scope}"], f"Sweep setup ({args.scope}-county): anchors and normaliser")
+        git_commit([P.setup], f"Sweep setup ({args.version}, {args.scope}-county): anchors and normaliser")
 
-    cfgs = sweep_configs()
+    cfgs = sweep_configs(args.version)
     if args.only:
         keep = set(args.only.split(","))
         cfgs = [c for c in cfgs if c[0] in keep]
-    todo = [(cid, lam) for cid, lam in cfgs if not (RESULTS / cid / "summary.json").exists()]
+    todo = [(cid, lam) for cid, lam in cfgs if not (P.root / cid / "summary.json").exists()]
     print(f"{len(cfgs)} configs, {len(todo)} to run", flush=True)
-    cfg = AnnealConfig(alpha=args.alpha, sweeps_per_temp=args.sweeps)
+    cfg = AnnealConfig(alpha=args.alpha, sweeps_per_temp=args.sweeps, min_group_size=P.min_size)
 
     t = time.time()
     ctx = mp.get_context("fork")  # workers inherit the built Problem
@@ -214,10 +265,10 @@ def main(argv=None):
             print(f"== {cid}: {'ok' if r['ok'] else 'FAILED ' + r.get('error', '')} "
                   f"({r.get('runtime_s', 0):.0f}s)", flush=True)
             if not args.no_commit:
-                git_commit([RESULTS / cid], f"Sweep {args.scope}-county: {cid} "
-                                            f"({'complete' if r['ok'] else 'failed'})")
+                git_commit([P.root / cid], f"Sweep {args.version} {args.scope}-county: {cid} "
+                                           f"({'complete' if r['ok'] else 'failed'})")
     print(f"sweep wall time {time.time() - t:.0f}s", flush=True)
-    (RESULTS / f"sweep_status_{args.scope}.json").write_text(json.dumps(status, indent=2))
+    (P.root / f"sweep_status_{args.scope}.json").write_text(json.dumps(status, indent=2))
     return status
 
 

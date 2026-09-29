@@ -126,7 +126,11 @@ def collect_state_stats(ens: EnsembleEvaluator, membership: np.ndarray):
 
 
 def select_anchors(grid, ens: EnsembleEvaluator | None = None, baseline: np.ndarray | None = None,
-                   threshold: float = K_THRESHOLD, add_guard_anchors: bool = True) -> AnchorSet:
+                   threshold: float = K_THRESHOLD, add_guard_anchors: bool = True,
+                   min_share: float | None = None, min_size: int = 1, capacity=None,
+                   repair: bool = False) -> AnchorSet:
+    """min_share: if set, anchor every relievable branch with p_e >= min_share (overrides threshold).
+    min_size: pad each initial group with its next most-helpful nodes up to this size."""
     if baseline is None:
         baseline, _ = wdt_membership(grid.template)
     if ens is None:
@@ -152,8 +156,17 @@ def select_anchors(grid, ens: EnsembleEvaluator | None = None, baseline: np.ndar
     tab = tab.sort_values(["p_e", "bind"], ascending=False)
 
     p_sorted = tab.p_e.to_numpy()
-    K = _k_for(p_sorted, threshold)
-    anchors = [int(m) for m in tab.index[:K]]
+    rel_over = tab.over_w.where(tab.relievable, 0.0)
+    tab["p_over"] = rel_over / rel_over.sum()   # pre-relief overload share (not masked by the greedy stop)
+    if min_share is not None:
+        # Showcase mode: every relievable branch with >= min_share of binding OR of pre-relief overloads.
+        sel = (tab.p_e >= min_share) | (tab.p_over >= min_share)
+        anchors = [int(m) for m in tab.index[sel]]
+        anchors.sort(key=lambda m: -(tab.loc[m, "p_e"] + tab.loc[m, "p_over"]))
+        K = len(anchors)
+    else:
+        K = _k_for(p_sorted, threshold)
+        anchors = [int(m) for m in tab.index[:K]]
     lit_sorted = np.sort(tab.p_literal.to_numpy())[::-1]
 
     N = len(grid.template)
@@ -169,6 +182,18 @@ def select_anchors(grid, ens: EnsembleEvaluator | None = None, baseline: np.ndar
     )
     if add_guard_anchors:
         _add_guard_anchors(grid, ens, a, nss_by_key)
+    if min_size > 1:
+        for k in range(a.init_membership.shape[1]):
+            col = a.init_membership[:, k]
+            order = np.argsort(-a.sigma[:, k])
+            for i in order:
+                if col.sum() >= min_size:
+                    break
+                col[i] = True
+            a.anchor_report[k]["n_init"] = int(col.sum())
+    if repair:
+        _repair(ens, a, min_size=min_size)
+    a.min_share = min_share
     return a
 
 
@@ -206,16 +231,53 @@ def _add_guard_anchors(grid, ens, a: AnchorSet, nss_by_key, max_rounds: int = 3)
     a.guard_log.append(dict(branches=list(a.branches), final_new_failures=int(ens(a.init_membership)["new_failures"])))
 
 
+def _repair(ens, a: AnchorSet, max_iter: int = 12, min_size: int = 1) -> None:
+    """[decision] Greedy feasibility repair of the initial grouping. While the guard is
+    violated, evaluate every single flip (add or remove node i in group k, keeping each
+    group >= min_size) and apply the one that most reduces new failures (ties: lower D).
+    Stops when feasible or when no single flip reduces the failure count."""
+    M = a.init_membership
+    N, K = M.shape
+    for it in range(max_iter):
+        n_fail = int(ens(M)["new_failures"])
+        if n_fail == 0:
+            break
+        best = None
+        sizes = M.sum(axis=0)
+        for k in range(K):
+            for i in range(N):
+                if M[i, k] and sizes[k] <= min_size:
+                    continue
+                C = M.copy(); C[i, k] = not C[i, k]
+                ev = ens(C)
+                key = (ev["new_failures"], ev["D"])
+                if best is None or key < best[0]:
+                    best = (key, i, k)
+        if best is None or best[0][0] >= n_fail:
+            a.guard_log.append(dict(repair_iter=it, stuck=True, new_failures=n_fail))
+            break
+        _, i, k = best
+        M[i, k] = not M[i, k]
+        a.guard_log.append(dict(repair_iter=it, anchor=int(a.branches[k]), node=int(i),
+                                action="add" if M[i, k] else "remove",
+                                new_failures=int(best[0][0]), D=float(best[0][1])))
+    a.init_membership = M
+
+
 def _anchor_column(grid, tab, var, nss_by_key, m: int, k: int, init_percentile):
     """sigma column, init column, orientation and report for anchor branch m.
 
     init_percentile=None seeds the group with ALL helpful-sign nodes (guard anchors).
     """
     row = tab.loc[m]
-    s_k = 1 if row.bind_pos >= row.bind_neg else -1
-    minority = float(min(row.bind_pos, row.bind_neg) / row.bind) if row.bind > 0 else 0.0
-    v = var[var.monitor == m].sort_values("bind", ascending=False)
-    wts = v.bind.to_numpy()
+    # Orientation and variant weights come from binding events; a branch that never binds
+    # (masked by the greedy stop) falls back to its pre-relief overload events.
+    use_bind = row.bind > 0
+    pos, tot = (row.bind_pos, row.bind) if use_bind else (row.over_pos_w, row.over_w)
+    s_k = 1 if pos >= tot - pos else -1
+    minority = float(min(pos, tot - pos) / tot) if tot > 0 else 0.0
+    v = var[var.monitor == m].sort_values("bind" if use_bind else "over_w", ascending=False)
+    wts = (v.bind if use_bind else v.over_w).to_numpy()
     keys = [(int(a_), int(b_)) for a_, b_ in zip(v.monitor, v.outage)]
     mats = np.stack([nss_by_key[kk] for kk in keys], axis=1)  # N x variants
     mean_nss = mats @ wts / wts.sum() if wts.sum() > 0 else mats.mean(axis=1)
@@ -231,6 +293,8 @@ def _anchor_column(grid, tab, var, nss_by_key, m: int, k: int, init_percentile):
     else:
         init = (sigma > 0) & (mag > np.percentile(mag, init_percentile))
     mec = grid.template.mec_mw.to_numpy()
+    if len(mec) < len(sigma):   # conventional nodes appended after the farms
+        mec = np.r_[mec, np.zeros(len(sigma) - len(mec))]
     rep = dict(
         k=k, monitor=int(m), branch_id=row.branch_id, name=row["name"], s_nom_mva=float(row.s_nom_mva),
         p_e=float(row.p_e), p_literal=float(row.p_literal), relievable_frac=float(row.relievable_frac),
@@ -242,7 +306,7 @@ def _anchor_column(grid, tab, var, nss_by_key, m: int, k: int, init_percentile):
         sign_agreement_binding_weighted=float(sum(a_ * b_ for a_, b_ in agree) / max(sum(b_ for _, b_ in agree), 1e-12)),
         nodes_sign_consistent_all_variants=all_consistent, corr_min_variant_vs_mean=corr_min,
         n_helpful=int(np.sum(sigma > 0)), n_init=int(init.sum()), init_mec_mw=float(mec[init].sum()),
-        guard_anchor=False,
+        guard_anchor=False, direction_source="binding" if use_bind else "pre-relief overload",
     )
     return sigma, init, s_k, rep
 
@@ -254,7 +318,7 @@ def save_anchors(a: AnchorSet, out_dir: Path) -> None:
     np.savez(out_dir / "anchors.npz", branches=np.array(a.branches), orientation=np.array(a.orientation),
              sigma=a.sigma, init_membership=a.init_membership)
     meta = dict(scope=a.scope, branches=a.branches, orientation=a.orientation,
-                threshold=K_THRESHOLD, relievable_min_fraction=RELIEVABLE_MIN_FRACTION,
+                threshold=K_THRESHOLD, min_share=getattr(a, "min_share", None), relievable_min_fraction=RELIEVABLE_MIN_FRACTION,
                 anchor_seeds=list(ANCHOR_SEEDS), thermal_scales=list(THERMAL_SCALES),
                 k_by_threshold={str(k): v for k, v in a.k_by_threshold.items()},
                 k_by_threshold_literal={str(k): v for k, v in a.k_by_threshold_literal.items()},
