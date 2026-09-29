@@ -92,7 +92,7 @@
   "bytes": null,
   "file": "",
   "notes": "323/323 points, models=era5, hourly wind_speed_100m,shortwave_radiation, 2019; sha256 over concatenated per-point JSON (sorted lat,lon); points in data/weather_points.csv",
-  "sha256": "9140e00fb45544d5fea274dc3f66d09a916cccd247aadcf34fe5cb479d2bed5c",
+  "sha256": "76a227047f3dc3193b3e61d683e5fe3bd40610e609a6c434712d98d4eac8563d",
   "url": "https://archive-api.open-meteo.com/v1/archive"
  },
  "opsd_time_series_60min": {
