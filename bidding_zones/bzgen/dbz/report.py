@@ -68,6 +68,10 @@ def graph_stage(cfg: dict | None = None, write: bool = True) -> dict:
                                                "alpha": p["alpha"], "lambda_b": p["lambda_b"],
                                                "isolated": contig["isolated"]})
         plots.dp_distribution(en)
+        from bzgen.cluster.sweep import INTERIM
+        plots.anchor_map(buses, pd.read_csv(INTERIM / "lines.csv", index_col=0),
+                         pd.read_csv(INTERIM / "links.csv", index_col=0),
+                         AN.read_static(an["cid"]), contig["isolated"], an["cid"])
         io.write_text(REPORTS / "dbz_graph.md", graph_report(out))
     return out
 
@@ -205,6 +209,8 @@ def graph_report(o: dict) -> str:
         f"  Σ(C_s − 1) = {o['contig']['excess_components']} on the European graph, all from these buses, in zones",
         f"  {o['contig']['zones_with_fragment']}. A contiguous B must move them to a neighbouring (foreign) zone,",
         "  which costs a small, fixed amount of rigidity at every λ_rigid.",
+        "",
+        "![anchor and isolated buses](../figures/dbz/anchor_isolated.png)",
         "",
         md(iso_df, 0),
         "",
