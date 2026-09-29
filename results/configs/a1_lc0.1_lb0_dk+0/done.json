@@ -1,0 +1,13 @@
+{
+ "params": {
+  "alpha": 1.0,
+  "lambda_c_initial": 0.1,
+  "lambda_b": 0.0,
+  "dk": 0,
+  "role": "vary lambda_b"
+ },
+ "wall_s": 178.1114113330841,
+ "n_ok": 31,
+ "n_non_contiguous": 0,
+ "n_degenerate": 1
+}
