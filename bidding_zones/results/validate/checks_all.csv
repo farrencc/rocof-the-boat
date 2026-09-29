@@ -1,6 +1,9 @@
 check,scoring,map,derating,hours,violations,asserted,max_excess_EUR
-C_market <= C_nodal,insample,k1,0.7,4368,0,False,-8861.962351230439
-C_market + C_redispatch >= C_nodal,insample,k1,0.7,4368,0,True,-55029.24310914148
+C_market <= C_nodal,oos_even,k1,0.2,4368,488,False,2094331.6749794595
+C_market + C_redispatch >= C_nodal,oos_even,k1,0.2,4368,0,True,-188597.23924753
+C_market <= C_nodal,oos_even,oos_headline,0.2,4368,488,False,2094331.6749794614
+C_market + C_redispatch >= C_nodal,oos_even,oos_headline,0.2,4368,0,True,-188597.16336491262
+C_market(k=1) <= C_market(split),oos_even,oos_headline,0.2,4368,0,True,1.950189471244812e-06
 C_market <= C_nodal,oos_even,k1,0.7,4368,0,False,-8861.962351230439
 C_market + C_redispatch >= C_nodal,oos_even,k1,0.7,4368,0,True,-55029.24310914148
 C_market <= C_nodal,oos_even,oos_headline,0.7,4368,0,False,-8861.962351231137

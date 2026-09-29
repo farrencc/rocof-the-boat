@@ -20,7 +20,7 @@ Dispatch down in this model is **entirely constraint-driven**. A DC-OPF has no S
 
 **Out-of-sample (primary).** Splitting DE does **not** demonstrably reduce dispatch down under this model: dispatch down is higher with DE split, and the interval excludes zero.
 
-ΔDD_RES (split − k=1) at derating 0.7: **+8,266 GWh/yr**; week-block 95% CI [+6,545, +10,170]; derating band [+8,266, +8,266]; sibling band [+8,266, +8,266] over 1 map(s).
+ΔDD_RES (split − k=1) at derating 0.7: **+8,266 GWh/yr**; week-block 95% CI [+6,545, +10,170]; derating band [+564, +8,266]; sibling band [+8,266, +8,266] over 1 map(s).
 
 Negative ΔDD means less dispatch down with DE split.
 
@@ -90,9 +90,10 @@ All of `results/validate.csv`, abridged (GWh/yr, M€/yr; shed energy is reporte
 
 |                                   |   DD_RES_GWh |   DD_RES_TH_GWh |   DD_share_of_avail_res |   internal_share |   border_share |   C_redispatch_MEUR |   C_total_MEUR |   efficiency_gap |   lp_infeasible_hours |   np_undeliverable_hours |   np_slack_focus_GWh |   shed_hours_excl_pockets |   shed_focus_GWh |   shed_pocket_GWh |   dDD_RES_GWh |   dDD_RES_lo |   dDD_RES_hi |
 |:----------------------------------|-------------:|----------------:|------------------------:|-----------------:|---------------:|--------------------:|---------------:|-----------------:|----------------------:|-------------------------:|---------------------:|--------------------------:|-----------------:|------------------:|--------------:|-------------:|-------------:|
-| ('insample', 'k1', 0.7)           |      44365.4 |          115551 |                   0.179 |            0.235 |          0.765 |             72274.6 |         138966 |            0.161 |                     0 |                     4331 |              1292.61 |                      3930 |          7389.61 |           10083.8 |        nan    |       nan    |        nan   |
-| ('oos_even', 'k1', 0.7)           |      44365.4 |          115551 |                   0.179 |            0.235 |          0.765 |             72274.6 |         138966 |            0.161 |                     0 |                     4331 |              1292.61 |                      3930 |          7389.61 |           10083.8 |        nan    |       nan    |        nan   |
-| ('oos_even', 'oos_headline', 0.7) |      52631.5 |          136685 |                   0.212 |            0.213 |          0.787 |             75154.7 |         141846 |            0.185 |                     0 |                     4332 |              3678.09 |                      4005 |          7678.98 |           10054.7 |       8266.16 |      6545.15 |      10169.8 |
+| ('oos_even', 'k1', 0.2)           |      20089.5 |         45932.9 |                   0.081 |            0.565 |          0.435 |             36879.8 |         131140 |            0.095 |                     0 |                     1959 |                0.605 |                      2427 |          7067.55 |           9823.67 |       nan     |      nan     |      nan     |
+| ('oos_even', 'oos_headline', 0.2) |      20653.6 |         52752.2 |                   0.083 |            0.518 |          0.482 |             37174.4 |         131444 |            0.098 |                     0 |                     1958 |               14.911 |                      2427 |          7067.55 |           9823.75 |       564.073 |      289.194 |      990.777 |
+| ('oos_even', 'k1', 0.7)           |      44365.4 |        115551   |                   0.179 |            0.235 |          0.765 |             72274.6 |         138966 |            0.161 |                     0 |                     4331 |             1292.61  |                      3930 |          7389.61 |          10083.8  |       nan     |      nan     |      nan     |
+| ('oos_even', 'oos_headline', 0.7) |      52631.5 |        136685   |                   0.212 |            0.213 |          0.787 |             75154.7 |         141846 |            0.185 |                     0 |                     4332 |             3678.09  |                      4005 |          7678.98 |          10054.7  |      8266.16  |     6545.15  |    10169.8   |
 
 ![ΔDD versus derating](../figures/validate/delta_dd_vs_derating.png)
 
@@ -113,11 +114,14 @@ Reference: 20–30 TWh/yr (unsourced, from the brief). Nothing is tuned to match
 
 Asserted: `C_market ≤ C_nodal` every hour at derating 1 (the zonal model is a relaxation only there; at lower deratings the ATC is below what the physical cut carries, so violations are reported, not asserted); `C_market(k=1) ≤ C_market(split)` every hour; `C_market + C_redispatch ≥ C_nodal` every feasible hour. Tolerance 1e-06·|C| + €10.
 
-|                                                   |   runs |   hours |   violations |   max_excess_EUR |
-|:--------------------------------------------------|-------:|--------:|-------------:|-----------------:|
-| ('C_market + C_redispatch >= C_nodal', 0.7, True) |      3 |   13104 |            0 |        -55029.2  |
-| ('C_market <= C_nodal', 0.7, False)               |      3 |   13104 |            0 |         -8861.96 |
-| ('C_market(k=1) <= C_market(split)', 0.7, True)   |      1 |    4368 |            0 |             0    |
+|                                                   |   runs |   hours |   violations |    max_excess_EUR |
+|:--------------------------------------------------|-------:|--------:|-------------:|------------------:|
+| ('C_market + C_redispatch >= C_nodal', 0.2, True) |      2 |    8736 |            0 | -188597           |
+| ('C_market + C_redispatch >= C_nodal', 0.7, True) |      2 |    8736 |            0 |  -55029.2         |
+| ('C_market <= C_nodal', 0.2, False)               |      2 |    8736 |          976 |       2.09433e+06 |
+| ('C_market <= C_nodal', 0.7, False)               |      2 |    8736 |            0 |   -8861.96        |
+| ('C_market(k=1) <= C_market(split)', 0.2, True)   |      1 |    4368 |            0 |       0           |
+| ('C_market(k=1) <= C_market(split)', 0.7, True)   |      1 |    4368 |            0 |       0           |
 
 **All asserted checks pass.**
 
