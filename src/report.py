@@ -50,6 +50,10 @@ def data_report(out: dict, cfg: dict) -> str:
     for _, row in res.iterrows():
         if "FLAG" in str(row.action):
             flags.append(f"- **{row.country} {row.carrier}**: {row.action}")
+    for c, row in r["wind_calibration"].iterrows() if len(r["wind_calibration"]) else []:
+        if "FLAG" in str(row.get("note", "")):
+            flags.append(f"- **{c}** onshore wind calibration: {row.note} (obs CF "
+                         f"{row.obs_cf:.3f}, calibrated {row.model_cf_cal:.3f})")
     for c, row in hyd.iterrows():
         if "DEFAULT" in str(row.source) and c in set(buses.country):
             flags.append(f"- **{c}** hydro CF: {row.source} ({row.cf:.2f})")
@@ -125,6 +129,12 @@ def data_report(out: dict, cfg: dict) -> str:
         md(hyd),
         "",
         "## Weather-derived capacity factors (ERA5 via Open-Meteo, 2019)",
+        "",
+        "Onshore wind calibration (`calibrate_onwind`): one wind-speed scale per country so that",
+        "the modelled 2019 wind CF matches Eurostat's observed 2019 CF (see",
+        "`src/network/assemble.py::calibrate_onwind`). Countries at a clip bound are flagged.",
+        "",
+        md(r["wind_calibration"], 3) if len(r["wind_calibration"]) else "_calibration disabled_",
         "",
         f"{len(out['pts'])} sample points (hex grid, {cfg['weather']['spacing_km']} km). "
         "Annual mean CF per country and carrier, against rough typical ranges (sanity check only).",

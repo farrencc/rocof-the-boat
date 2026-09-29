@@ -40,6 +40,9 @@ weather:
   keep_frac: 0.6          # keep a point if a bus/offshore plant is within keep_frac*spacing
   batch: 5                # locations per request
   calls_per_hour: 3500    # weighted Open-Meteo calls/h (free tier limit 5000/h, 10000/day)
+  calibrate_onwind: true  # per-country onshore speed scale to match Eurostat observed wind CF (weather year)
+  calibrate_clip: [0.8, 1.6]
+  calibrate_min_mw: 100
   wind:
     cut_in: 3.0
     rated: 12.0
@@ -69,6 +72,7 @@ edges:
   dp_clip_q: 0.99
   J_remedy: none
   J_clip_q: 0.99
+  signal_min: 0.01        # country mean of the raw statistic below this = "no congestion signal"
 
 spectrum:
   k_max: 12

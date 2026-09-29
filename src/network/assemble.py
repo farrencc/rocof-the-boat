@@ -169,6 +169,82 @@ def load_key(buses: pd.DataFrame, cfg: dict) -> tuple[pd.Series, pd.DataFrame]:
     return key, pd.DataFrame(rows).set_index("country")
 
 
+def calibrate_onwind(cfg: dict, pl: pd.DataFrame, speed: pd.DataFrame, wind: pd.DataFrame):
+    """Per-country onshore wind-speed scale s_c so that the modelled weather-year wind CF
+    matches Eurostat's observed CF.
+
+    Observed: ``nrg_bal_peh`` GEP of RA300 (all wind, GWh, weather year) over the mean of
+    ``nrg_inf_epcrw`` RA310+RA320 capacity at the end of the previous and the weather year.
+    Modelled: the same 2019 onshore/offshore capacity split, with the onshore CF as the
+    capacity-weighted mean over the 2025 onshore fleet's locations (a proxy for the 2019
+    locations) and the offshore CF unscaled.  Only onshore speeds are scaled: ERA5 biases
+    are largest over complex terrain.  s_c is clipped to ``calibrate_clip``; countries
+    with < ``calibrate_min_mw`` of wind are left unscaled.  One factor per country, so
+    the within-country spatial pattern and all temporal structure are ERA5's own.
+    """
+    w = cfg["weather"]
+    if not w.get("calibrate_onwind", False):
+        return {}, pd.DataFrame()
+    wy = cfg["weather_year"]
+    from src.data import eurostat
+    from src.data.countries import EUROSTAT
+    gen = eurostat.read("nrg_bal_peh")
+    gen = gen[(gen.nrg_bal == "GEP") & (gen.unit == "GWH") & (gen.siec == "RA300") & (gen.year == wy)]
+    gen = gen.set_index("geo").value
+    cap = eurostat.read("nrg_inf_epcrw")
+    cap = cap[(cap.plant_tec == "CAP_NET_ELC") & (cap.unit == "MW") & cap.year.isin([wy - 1, wy])]
+    cap = cap.pivot_table(index=["geo", "year"], columns="siec", values="value")
+    lo, hi = w["calibrate_clip"]
+    scale, rows = {}, []
+    for c in sorted(pl.country.unique()):
+        es = EUROSTAT[c]
+        on = pl[(pl.country == c) & (pl.carrier == "onwind")]
+        off = pl[(pl.country == c) & (pl.carrier == "offwind")]
+        row = {"country": c}
+        try:
+            k_on = float(np.nanmean([cap.loc[(es, y), "RA310"] for y in (wy - 1, wy)]))
+            k_off = float(np.nanmean([cap.loc[(es, y)].get("RA320", 0.0) for y in (wy - 1, wy)]))
+            g = float(gen.get(es, np.nan))
+        except KeyError:
+            row["note"] = "no Eurostat data: unscaled"
+            rows.append(row)
+            continue
+        k_off = 0.0 if not np.isfinite(k_off) else k_off
+        if not (np.isfinite(g) and np.isfinite(k_on)) or k_on + k_off < w["calibrate_min_mw"] or on.p_nom.sum() <= 0:
+            row["note"] = "too little wind or no data: unscaled"
+            rows.append(row)
+            continue
+        cf_obs = g * 1e3 / ((k_on + k_off) * 8760)
+        won = on.groupby("point").p_nom.sum()
+        cf_off = (float((wind[off.groupby("point").p_nom.sum().index].mean()
+                         * off.groupby("point").p_nom.sum()).sum() / off.p_nom.sum())
+                  if off.p_nom.sum() > 0 else 0.0)
+
+        def model(s):
+            cf_on = float((renewables.wind_cf(speed[won.index] * s, w["wind"]).mean() * won).sum()
+                          / won.sum())
+            return (k_on * cf_on + k_off * cf_off) / (k_on + k_off), cf_on
+
+        raw, cf_on_raw = model(1.0)
+        a, b = lo, hi
+        if model(a)[0] > cf_obs:
+            s_c, note = a, f"FLAG at lower clip {lo}"
+        elif model(b)[0] < cf_obs:
+            s_c, note = b, f"FLAG at upper clip {hi}"
+        else:
+            for _ in range(40):
+                m_ = 0.5 * (a + b)
+                a, b = (m_, b) if model(m_)[0] < cf_obs else (a, m_)
+            s_c, note = 0.5 * (a + b), "calibrated"
+        cal, cf_on_cal = model(s_c)
+        scale[c] = s_c
+        row.update(obs_cf=cf_obs, model_cf_raw=raw, onwind_cf_raw=cf_on_raw, speed_scale=s_c,
+                   model_cf_cal=cal, onwind_cf_cal=cf_on_cal, cap_on_mw=k_on, cap_off_mw=k_off,
+                   note=note)
+        rows.append(row)
+    return scale, pd.DataFrame(rows).set_index("country")
+
+
 def assemble(cfg: dict | None = None) -> dict:
     cfg = cfg or config.load()
     INTERIM.mkdir(parents=True, exist_ok=True)
@@ -247,6 +323,9 @@ def assemble(cfg: dict | None = None) -> dict:
             res_rows.append(row)
     pl = pd.concat([pl, pd.DataFrame(extra)], ignore_index=True)
 
+    # ---- onshore wind calibration to Eurostat observed CF (weather year)
+    wind_scale, cal_rep = calibrate_onwind(cfg, pl, wx["wind_speed_100m"].set_axis(idx), wind)
+
     # ---- hydro CF
     hcf = fleet.hydro_cf(cfg, pl)
 
@@ -269,12 +348,16 @@ def assemble(cfg: dict | None = None) -> dict:
 
     # time-varying CF for RES: capacity-weighted mean of plant CFs
     prof = {}
+    speed = wx["wind_speed_100m"].set_axis(idx)
     for car, cf in (("onwind", wind), ("offwind", wind), ("solar", pv)):
         sub = pl[pl.carrier == car]
         w = sub.groupby(["bus", "point"]).p_nom.sum()
         for b, g in w.groupby(level=0):
             pts_b = g.index.get_level_values(1)
-            prof[f"{b} {car}"] = (cf[pts_b].to_numpy() @ g.to_numpy()) / g.sum()
+            s_c = wind_scale.get(buses.at[b, "country"], 1.0) if car == "onwind" else 1.0
+            m = (renewables.wind_cf(speed[pts_b] * s_c, cfg["weather"]["wind"])
+                 if s_c != 1.0 else cf[pts_b])
+            prof[f"{b} {car}"] = (m.to_numpy() @ g.to_numpy()) / g.sum()
     prof = pd.DataFrame(prof, index=idx)
     prof = prof[[c for c in prof.columns if c in gens.index]]
 
@@ -291,6 +374,7 @@ def assemble(cfg: dict | None = None) -> dict:
     wind.to_parquet(INTERIM / "wind_cf_points.parquet")
     pv.to_parquet(INTERIM / "pv_cf_points.parquet")
     reports = {"topology": topo_rep, "merge": merge_rep, "demand": dem_rep, "load_key": key_rep,
+               "wind_calibration": cal_rep,
                "fleet": fleet_rep, "res_targets": pd.DataFrame(res_rows), "hydro_cf": hcf}
     return {"buses": buses, "lines": lines, "links": links, "gens": gens, "prof": prof,
             "nat": nat, "key": key, "plants": pl, "wind": wind, "pv": pv, "pts": pts,
