@@ -37,6 +37,36 @@ from bzgen.ndbz.plots import INK, INK2, SERIES, _style
 
 
 # --------------------------------------------------------------------------- #
+# plain-language labels
+# --------------------------------------------------------------------------- #
+
+SCENARIO_TEXT = {
+    "baseline": "a normal year (all hours)",
+    "peak_demand": "the hours of highest demand",
+    "dunkelflaute": "cold, dark, windless hours",
+    "wind_surplus": "the windiest hours",
+    "max_dispersion": "the hours with the most uneven prices",
+}
+COUNTRY_NAME = {"IE": "Ireland", "FR": "France", "DE": "Germany", "ES": "Spain", "IT": "Italy",
+                "NO": "Norway", "SE": "Sweden", "PL": "Poland", "PT": "Portugal", "NL": "Netherlands",
+                "BE": "Belgium", "AT": "Austria", "CH": "Switzerland", "DK": "Denmark", "FI": "Finland"}
+
+
+def anchor_word(lam_rigid: float) -> str:
+    """How strongly the map is pulled towards today's zones, in words."""
+    for lim, word in ((0.0, "none"), (0.1, "weak"), (0.3, "light"), (1.0, "moderate"), (3.0, "strong")):
+        if lam_rigid <= lim + 1e-12:
+            return word
+    return "very strong"
+
+
+def headline(c: str, scenario: str, lam_rigid: float) -> tuple[str, str]:
+    title = f"{COUNTRY_NAME.get(c, c)}: zones drawn from {SCENARIO_TEXT.get(scenario, scenario)}"
+    sub = f"Pull towards today's zones: {anchor_word(lam_rigid)} (λ = {lam_rigid:g})"
+    return title, sub
+
+
+# --------------------------------------------------------------------------- #
 # colour matching
 # --------------------------------------------------------------------------- #
 
@@ -118,7 +148,7 @@ def bus_cells(buses: pd.DataFrame, all_buses: list, members: list):
 
 def render(frames: np.ndarray, meta: np.ndarray, nodes: list, host: dict, A: np.ndarray,
            zone_ids: list, k: int, buses: pd.DataFrame, lines: pd.DataFrame, members: list,
-           title: str, lam_rigid: float, lam_b: float, out_base: Path, fps: float = 10.0,
+           title: str, subtitle: str, lam_rigid: float, lam_b: float, out_base: Path, fps: float = 10.0,
            hold_s: float = 1.0, dpi: int = 80, mp4: bool = True) -> dict:
     """Write ``<out_base>.gif`` (and ``.mp4``).  Returns paths and per-frame diagnostics."""
     import imageio.v3 as iio
@@ -176,47 +206,67 @@ def render(frames: np.ndarray, meta: np.ndarray, nodes: list, host: dict, A: np.
         fig.canvas.draw()
         return np.asarray(fig.canvas.buffer_rgba())[:, :, :3].copy()
 
+    from matplotlib.lines import Line2D
+    from matplotlib.patches import Patch
+
+    def header(fig):
+        fig.text(0.01, 0.955, title, fontsize=13, color=INK, ha="left", va="center")
+        fig.text(0.01, 0.905, subtitle, fontsize=9.5, color=INK2, ha="left", va="center")
+
+    def key(fig, x0):
+        handles = [Patch(facecolor="white", edgecolor=INK, hatch="////", lw=0.6),
+                   Line2D([], [], ls="", marker="o", ms=6, mfc="white", mec=INK, mew=1.6)]
+        fig.legend(handles, ["area of a bus that changed zone", "bus that changed zone"],
+                   loc="lower left", bbox_to_anchor=(x0, 0.005), ncol=2, frameon=False,
+                   fontsize=7.5, handlelength=1.6, columnspacing=1.2)
+
     images = []
     n_temps = int(np.sum(T[1:] > 0))
+    n = len(A)
     for f in range(F):
         fig = plt.figure(figsize=(11.0, 6.0), dpi=dpi)
-        ax = fig.add_axes([0.01, 0.04, 0.50, 0.84])
-        phase = ("initial state (graph Voronoi)" if f == 0 else
-                 f"temperature {f}/{n_temps}" if T[f] > 0 else "quench (T = 0)")
-        map_axes(ax, col[f], moved[f], f"{phase}   T = {T[f]:.3g}   accept = {meta[f, 6]:.1%}")
-        a1 = fig.add_axes([0.58, 0.55, 0.40, 0.33])
-        a2 = fig.add_axes([0.58, 0.12, 0.40, 0.30])
+        header(fig)
+        ax = fig.add_axes([0.01, 0.07, 0.50, 0.76])
+        phase = ("Start: random zones" if f == 0 else
+                 f"Searching: step {f} of {n_temps}" if T[f] > 0 else "Final settling")
+        map_axes(ax, col[f], moved[f], phase)
+        key(fig, 0.01)
+        a1 = fig.add_axes([0.58, 0.53, 0.40, 0.30])
+        a2 = fig.add_axes([0.58, 0.12, 0.40, 0.28])
         for a in (a1, a2):
             _style(a)
-        for y, lab, c in ((potts, "Potts", SERIES[0]), (bal, "λ_b · balance", SERIES[1]),
-                          (rig, "λ_rigid · H_rigid", SERIES[2])):
+        for y, lab, c in ((potts, "fit to grid congestion", SERIES[0]),
+                          (bal, "zone size balance", SERIES[1]),
+                          (rig, "distance from today's zones", SERIES[2])):
             a1.plot(x, y, color=c, lw=1.6, label=lab)
             a1.plot([f], [y[f]], "o", color=c, ms=5, mec="white", mew=1.0)
         a1.axvline(f, color=INK2, lw=0.7, ls=":")
-        a1.legend(fontsize=6.5, frameon=False, loc="upper right")
-        a1.set_title(f"energy terms (Σ(C−1) = {meta[f, 3]:.0f}: contiguous)", fontsize=8,
-                     color=INK, loc="left")
-        a1.text(0.0, -0.12, f"Potts {potts[f]:.1f} · balance {bal[f]:.2f} · rigidity {rig[f]:.2f}",
-                transform=a1.transAxes, fontsize=7, color=INK2, va="top")
+        a1.legend(fontsize=7, frameon=False, loc="upper right")
+        a1.set_title("Score being minimised (lower is better)", fontsize=9, color=INK, loc="left")
+        a1.set_ylabel("score", fontsize=7.5, color=INK2)
+        a1.tick_params(labelbottom=False)
         a2.plot(x, td, color=SERIES[0], lw=1.6)
         a2.plot([f], [td[f]], "o", color=SERIES[0], ms=5, mec="white", mew=1.0)
+        a2.annotate(f"{td[f]} of {n}", (f, td[f]), xytext=(6, 6), textcoords="offset points",
+                    fontsize=8, color=INK)
         a2.axvline(f, color=INK2, lw=0.7, ls=":")
-        a2.set_title(f"transfer distance from A: {td[f]} of {len(A)} buses", fontsize=8,
-                     color=INK, loc="left")
-        a2.set_xlabel("frame (temperature steps, then quench)", fontsize=7, color=INK2)
-        a2.set_ylim(bottom=0)
-        fig.suptitle(f"{title}    λ_rigid = {lam_rigid:g}", fontsize=11, color=INK, x=0.01,
-                     ha="left", y=0.97)
+        a2.set_title("Buses in a different zone from today", fontsize=9, color=INK, loc="left")
+        a2.set_ylabel("buses", fontsize=7.5, color=INK2)
+        a2.set_xlabel("search progress", fontsize=7.5, color=INK2)
+        a2.set_ylim(0, max(int(td.max()) + 2, 4))
+        a2.tick_params(labelbottom=False)
         images.append(canvas(fig))
         plt.close(fig)
-    # held comparison frame: converged map beside A
+    # held comparison frame: converged map beside today's
     fig = plt.figure(figsize=(11.0, 6.0), dpi=dpi)
-    ax1 = fig.add_axes([0.01, 0.04, 0.48, 0.84])
-    ax2 = fig.add_axes([0.51, 0.04, 0.48, 0.84])
-    map_axes(ax1, A, np.zeros_like(A, bool), "A: status-quo static map")
-    map_axes(ax2, col[-1], moved[-1], f"converged B: {td[-1]} buses moved (hatched)")
-    fig.suptitle(f"{title}    λ_rigid = {lam_rigid:g}", fontsize=11, color=INK, x=0.01, ha="left",
-                 y=0.97)
+    header(fig)
+    ax1 = fig.add_axes([0.01, 0.07, 0.48, 0.76])
+    ax2 = fig.add_axes([0.51, 0.07, 0.48, 0.76])
+    map_axes(ax1, A, np.zeros_like(A, bool), "Today's zones")
+    res = ("Result: same zones as today" if td[-1] == 0 else
+           f"Result: {td[-1]} of {n} buses change zone")
+    map_axes(ax2, col[-1], moved[-1], res)
+    key(fig, 0.51)
     last = canvas(fig)
     plt.close(fig)
     hold = max(1, int(round(hold_s * fps)))
@@ -272,8 +322,11 @@ def animate_cell(ctx, c: str, scenario: str, lam_rigid: float, restart="best", c
     lines = pd.read_csv(SW.INTERIM / "lines.csv", index_col=0)
     mem = sorted(ctx.buses[ctx.buses.cluster_country == c].country.unique())
     tag = f"{c}_{scenario}{'' if not clip_handling else '_' + clip_handling}_lr{lam_rigid:g}"
+    title, sub = headline(c, scenario, lam_rigid)
+    if clip_handling and clip_handling != "as_is":
+        sub += f", {clip_handling} prices"
     out = render(res["frames"], res["frame_meta"], nodes, host, anc.A, anc.zone_ids, anc.k,
-                 ctx.buses, lines, mem, f"{c} · {scenario}", lam_rigid, ctx.params["lambda_b"],
+                 ctx.buses, lines, mem, title, sub, lam_rigid, ctx.params["lambda_b"],
                  figures_dir(cfg) / "anim" / tag, fps=fps or an.get("fps", 10.0),
                  hold_s=an.get("hold_s", 1.0), dpi=an.get("dpi", 80), mp4=an.get("mp4", True))
     out.update(restart=r, result=res)
