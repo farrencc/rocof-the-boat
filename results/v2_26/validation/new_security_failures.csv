@@ -1,0 +1,6 @@
+grouping,seed,thermal_scale,snapshot,case_weight,worst_monitor,worst_outage,worst_loading
+d00_dd_only:bestE,2003,0.9,110,0.0065,458,314,1.0131017552212023
+d00_dd_only:bestD,2003,0.9,110,0.0065,458,314,1.0131017552212023
+d01_dd_conv:bestE,2003,0.9,110,0.0065,458,314,1.0012377033432125
+d01_dd_conv:bestD,2003,0.9,110,0.0065,458,314,1.0012377033432125
+d14_structural_only:bestE,2005,0.9,134,0.0052,458,314,1.024108214312728

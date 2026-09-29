@@ -1,0 +1,18 @@
+[d01_dd_conv] E0=0.0000 D0=6.4293  T_start=0.000119 T_end=2.574e-06 alpha=0.99
+[d01_dd_conv] step   25 T=9.252e-05 E=-0.2062 D=5.7582 best E=-0.2062 (D=5.7582) best D=5.7582 acc=13/30 infeas=11 calls=791 sizes=[67, 65, 5, 57, 55, 27, 31, 5, 37, 10]
+[d01_dd_conv] step   50 T=7.197e-05 E=-0.4556 D=4.8501 best E=-0.4556 (D=4.8501) best D=4.8436 acc=13/30 infeas=14 calls=1541 sizes=[74, 88, 5, 82, 61, 12, 34, 5, 61, 6]
+[d01_dd_conv] step   75 T=5.598e-05 E=-0.5541 D=4.4931 best E=-0.5541 (D=4.4931) best D=4.3845 acc=17/30 infeas=8 calls=2291 sizes=[90, 103, 5, 82, 72, 5, 17, 5, 73, 5]
+[d01_dd_conv] step  100 T=4.354e-05 E=-0.5575 D=4.4804 best E=-0.5575 (D=4.4803) best D=4.3845 acc=15/30 infeas=8 calls=3041 sizes=[88, 102, 5, 91, 80, 6, 14, 6, 75, 5]
+[d01_dd_conv] step  125 T=3.387e-05 E=-0.5802 D=4.3205 best E=-0.5802 (D=4.3202) best D=4.2507 acc=16/30 infeas=6 calls=3791 sizes=[92, 107, 5, 103, 81, 5, 14, 5, 89, 5]
+[d01_dd_conv] step  150 T=2.634e-05 E=-0.5976 D=4.2542 best E=-0.5976 (D=4.2542) best D=4.2507 acc=18/30 infeas=5 calls=4541 sizes=[96, 105, 5, 99, 94, 5, 16, 5, 87, 5]
+[d01_dd_conv] step  175 T=2.049e-05 E=-0.5984 D=4.2560 best E=-0.5984 (D=4.2560) best D=4.2507 acc=15/30 infeas=7 calls=5291 sizes=[90, 81, 5, 111, 101, 5, 18, 5, 97, 6]
+[d01_dd_conv] step  200 T=1.594e-05 E=-0.6493 D=4.1305 best E=-0.6493 (D=4.1305) best D=4.1290 acc=14/30 infeas=8 calls=6041 sizes=[88, 85, 6, 100, 104, 5, 19, 5, 94, 7]
+[d01_dd_conv] step  225 T=1.24e-05 E=-0.6494 D=4.1303 best E=-0.6494 (D=4.1303) best D=4.1290 acc=15/30 infeas=9 calls=6791 sizes=[93, 102, 5, 98, 97, 5, 18, 5, 87, 6]
+[d01_dd_conv] step  250 T=9.642e-06 E=-0.6520 D=4.1150 best E=-0.6520 (D=4.1150) best D=4.1150 acc=11/30 infeas=10 calls=7541 sizes=[100, 84, 6, 84, 102, 6, 17, 5, 89, 6]
+[d01_dd_conv] step  275 T=7.5e-06 E=-0.6520 D=4.1150 best E=-0.6520 (D=4.1150) best D=4.1150 acc=13/30 infeas=6 calls=8291 sizes=[107, 87, 6, 87, 89, 6, 17, 5, 91, 6]
+[d01_dd_conv] step  300 T=5.834e-06 E=-0.6520 D=4.1150 best E=-0.6520 (D=4.1150) best D=4.1150 acc=7/30 infeas=9 calls=9041 sizes=[98, 94, 6, 95, 87, 6, 19, 5, 98, 6]
+[d01_dd_conv] step  325 T=4.537e-06 E=-0.6520 D=4.1150 best E=-0.6520 (D=4.1150) best D=4.1150 acc=15/30 infeas=2 calls=9791 sizes=[96, 99, 6, 99, 91, 6, 18, 5, 97, 7]
+[d01_dd_conv] step  350 T=3.529e-06 E=-0.6520 D=4.1150 best E=-0.6520 (D=4.1150) best D=4.1150 acc=17/30 infeas=4 calls=10541 sizes=[94, 97, 5, 105, 87, 7, 16, 5, 108, 7]
+[d01_dd_conv] step  375 T=2.745e-06 E=-0.6520 D=4.1150 best E=-0.6520 (D=4.1150) best D=4.1150 acc=14/30 infeas=6 calls=11291 sizes=[93, 94, 7, 107, 93, 6, 17, 5, 78, 6]
+[d01_dd_conv] step  382 T=2.559e-06 E=-0.6520 D=4.1150 best E=-0.6520 (D=4.1150) best D=4.1150 acc=13/30 infeas=8 calls=11501 sizes=[91, 97, 7, 106, 92, 6, 18, 5, 81, 6]
+[d01_dd_conv] done in 264.7s

@@ -1,0 +1,6 @@
+{
+  "best_config": "d13_P2",
+  "best_grouping": "d13_P2:bestE",
+  "rule": "lowest mean validation D + C (renewable dispatch-down + conventional redispatch) among best-E groupings with 0 new failures vs WDT",
+  "new_failures": 0
+}

@@ -1,0 +1,77 @@
+[
+  {
+    "config_id": "d02_base",
+    "ok": true,
+    "runtime_s": 199.09027528762817
+  },
+  {
+    "config_id": "d00_dd_only",
+    "ok": true,
+    "runtime_s": 228.4955554008484
+  },
+  {
+    "config_id": "d03_N0",
+    "ok": true,
+    "runtime_s": 238.66259098052979
+  },
+  {
+    "config_id": "d01_dd_conv",
+    "ok": true,
+    "runtime_s": 254.4722101688385
+  },
+  {
+    "config_id": "d04_N0.05",
+    "ok": true,
+    "runtime_s": 190.806884765625
+  },
+  {
+    "config_id": "d05_N0.25",
+    "ok": true,
+    "runtime_s": 168.51337552070618
+  },
+  {
+    "config_id": "d06_C0",
+    "ok": true,
+    "runtime_s": 197.4453718662262
+  },
+  {
+    "config_id": "d07_C2",
+    "ok": true,
+    "runtime_s": 199.7998285293579
+  },
+  {
+    "config_id": "d09_S2",
+    "ok": true,
+    "runtime_s": 182.21411514282227
+  },
+  {
+    "config_id": "d08_S0",
+    "ok": true,
+    "runtime_s": 196.5694432258606
+  },
+  {
+    "config_id": "d10_V0",
+    "ok": true,
+    "runtime_s": 159.45283699035645
+  },
+  {
+    "config_id": "d11_V2",
+    "ok": true,
+    "runtime_s": 203.74224019050598
+  },
+  {
+    "config_id": "d13_P2",
+    "ok": true,
+    "runtime_s": 185.17177557945251
+  },
+  {
+    "config_id": "d12_P0",
+    "ok": true,
+    "runtime_s": 201.38158535957336
+  },
+  {
+    "config_id": "d14_structural_only",
+    "ok": true,
+    "runtime_s": 206.67480158805847
+  }
+]

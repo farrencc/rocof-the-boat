@@ -1,0 +1,12 @@
+[c13_all_high] E0=0.0000 D0=6.7473  T_start=0.263 T_end=0.001993 alpha=0.98
+[c13_all_high] step   25 T=0.1587 E=1.1085 D=6.3066 best E=-0.3718 (D=6.2475) best D=6.2179 acc=6/25 infeas=10 calls=666 sizes=[31, 44, 53, 13]
+[c13_all_high] step   50 T=0.09579 E=-9.0860 D=6.1290 best E=-9.3616 (D=6.1459) best D=6.1063 acc=3/25 infeas=10 calls=1291 sizes=[30, 15, 50, 13]
+[c13_all_high] step   75 T=0.05781 E=-23.4659 D=6.0064 best E=-23.6401 (D=5.9951) best D=5.9110 acc=1/25 infeas=13 calls=1916 sizes=[23, 4, 39, 13]
+[c13_all_high] step  100 T=0.03488 E=-31.6355 D=5.9032 best E=-31.6355 (D=5.9032) best D=5.8587 acc=2/25 infeas=11 calls=2541 sizes=[17, 1, 22, 13]
+[c13_all_high] step  125 T=0.02105 E=-33.6526 D=5.9023 best E=-33.7609 (D=5.9006) best D=5.8587 acc=1/25 infeas=13 calls=3166 sizes=[11, 1, 23, 13]
+[c13_all_high] step  150 T=0.0127 E=-34.1434 D=5.8890 best E=-34.1443 (D=5.8876) best D=5.8587 acc=0/25 infeas=11 calls=3791 sizes=[12, 1, 17, 13]
+[c13_all_high] step  175 T=0.007666 E=-34.5218 D=5.8885 best E=-34.5218 (D=5.8885) best D=5.8587 acc=0/25 infeas=13 calls=4416 sizes=[9, 1, 16, 13]
+[c13_all_high] step  200 T=0.004626 E=-34.8480 D=5.8425 best E=-34.8480 (D=5.8425) best D=5.8425 acc=2/25 infeas=10 calls=5041 sizes=[8, 1, 13, 13]
+[c13_all_high] step  225 T=0.002792 E=-37.9943 D=5.8335 best E=-37.9943 (D=5.8335) best D=5.8263 acc=0/25 infeas=13 calls=5666 sizes=[1, 1, 16, 13]
+[c13_all_high] step  242 T=0.00198 E=-57.4883 D=5.8582 best E=-57.4883 (D=5.8582) best D=5.8029 acc=4/25 infeas=3 calls=6091 sizes=[5, 5, 3, 14]
+[c13_all_high] done in 54.4s
