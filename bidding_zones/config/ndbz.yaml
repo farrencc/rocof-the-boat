@@ -1,0 +1,31 @@
+# Scenario-conditioned national dynamical bidding zones (bzgen/ndbz/).
+# Overlay: deep-merged over config/default.yaml by bzgen.ndbz.load_config().
+# Nothing here changes a key the static pipeline reads, so static results are unaffected.
+
+ndbz:
+  anchor_config_id: a2_lc0.1_lb0.5_dk+0   # status-quo map A = sweep.headline
+  results_dir: results/ndbz
+  figures_dir: figures/ndbz
+
+scenario:
+  names: [baseline, peak_demand, dunkelflaute, wind_surplus, max_dispersion]
+  scope: country            # country | europe: whose outlier hours define the subset
+  q: 0.01                   # top-q share of hours (peak_demand, wind_surplus, max_dispersion)
+  min_snapshots: 200        # hours of weight; q (or the dunkelflaute quantiles) is widened to reach it
+  dunkelflaute:
+    vre_q: 0.10             # bottom decile of VRE (wind + solar) capacity factor ...
+    load_q: 0.3333          # ... and top tercile of load
+    widen_step: 0.05        # both quantiles widened by this step until min_snapshots is reached
+  clip_handling: as_is      # as_is | exclude_clipped (drop edge-hours with an endpoint at the clip) | unclipped (solved prices before the clip)
+  normalisation: baseline   # baseline (divide by the full-year country scale) | self (renormalise per scenario)
+  bootstrap:
+    n: 500
+    seed: 7
+    ci: 0.95
+    thin_ratio: 0.5         # CI width of the country-mean statistic / between-edge std above this = too thin
+  clip_material:            # as_is vs exclude_clipped "disagree materially" if either holds
+    spearman_min: 0.9       # rank correlation of the per-edge statistic below this
+    mean_rel_change: 0.2    # relative change of the country mean above this
+
+rigidity:
+  lambda: [0.1, 0.3, 1.0, 3.0, 10.0]
