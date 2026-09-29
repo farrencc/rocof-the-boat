@@ -35,7 +35,32 @@
    "role": "sibling",
    "energy": -752.8791932861346,
    "restart": 4
+  },
+  "oos_headline": {
+   "fit": "oos",
+   "role": "headline",
+   "energy": -757.9039206195957,
+   "restart": 4
+  },
+  "oos_sib1": {
+   "fit": "oos",
+   "role": "sibling",
+   "energy": -757.5436770301203,
+   "restart": 2
+  },
+  "oos_sib2": {
+   "fit": "oos",
+   "role": "sibling",
+   "energy": -755.9182177895477,
+   "restart": 5
+  },
+  "oos_sib3": {
+   "fit": "oos",
+   "role": "sibling",
+   "energy": -755.2031346189058,
+   "restart": 6
   }
  },
- "is_headline_energy": -759.2260949814001
+ "is_headline_energy": -759.2260949814001,
+ "ari_oos_vs_is_headline": 0.2725738867419921
 }
