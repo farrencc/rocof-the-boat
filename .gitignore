@@ -5,3 +5,4 @@ data/cache/
 data/solved/
 data/interim/
 .pytest_cache/
+logs/

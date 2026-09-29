@@ -6,11 +6,11 @@ weather_year: 2019        # load shape + ERA5 weather year (latest full pre-COVI
 
 scope:
   # EU27 + NO + CH + Western Balkans; GB excluded (NI too, see PLAN.md §1).
-  countries: [AT, BE, BG, HR, CY, CZ, DK, EE, FI, FR, DE, GR, HU, IE, IT, LV, LT, LU,
-              MT, NL, PL, PT, RO, SK, SI, ES, SE, NO, CH, AL, BA, ME, MK, RS, XK]
-  exclude: [GB]
+  # Quoted: bare NO is YAML boolean false.
+  countries: ["AT", "BE", "BG", "HR", "CY", "CZ", "DK", "EE", "FI", "FR", "DE", "GR", "HU", "IE", "IT", "LV", "LT", "LU", "MT", "NL", "PL", "PT", "RO", "SK", "SI", "ES", "SE", "NO", "CH", "AL", "BA", "ME", "MK", "RS", "XK"]
+  exclude: ["GB"]
   # Merged into the neighbour with the largest cross-border susceptance.
-  merge_always: [LU, ME, LI, AD, MC, SM, VA]
+  merge_always: ["LU", "ME", "LI", "AD", "MC", "SM", "VA"]
   min_buses: 5            # any country with fewer buses after simplification is merged too
 
 sources:
@@ -27,15 +27,19 @@ network:
   v_ref_kv: 380
   s_max_pu: 0.7           # PyPSA-Eur default N-1 proxy
   drop_under_construction: true
+  min_component: 3       # smaller connected components are removed (load -> nearest bus)
 
 demand:
-  w_pop: 0.6              # PyPSA-Eur build_electricity_demand_base default split (INFERENCE: check)
-  w_gdp: 0.4
+  # PyPSA-Eur scripts/build_electricity_demand_base.py nuts3_distribution_keys,
+  # example/default {"gdp": 0.6, "population": 0.4}; each normed within country.
+  w_gdp: 0.6
+  w_pop: 0.4
 
 weather:
-  grid_deg: 1.0
-  max_dist_deg: 0.75      # keep a grid point only if a bus lies within this distance
-  pause_s: 1.5
+  spacing_km: 150         # hex grid ground spacing -> ~300 points
+  keep_frac: 0.6          # keep a point if a bus/offshore plant is within keep_frac*spacing
+  batch: 5                # locations per request
+  calls_per_hour: 3500    # weighted Open-Meteo calls/h (free tier limit 5000/h, 10000/day)
   wind:
     cut_in: 3.0
     rated: 12.0
@@ -45,12 +49,12 @@ weather:
     performance_ratio: 0.85
 
 solve:
-  n_snapshots: 300        # k-medoids representative hours; weight = cluster size
+  n_snapshots: all        # "all" = 8760 h, weight 1; an integer = k-means representative hours, weight = cluster size
   batch_hours: 24
   workers: 4
   load_shedding_cost: 3000.0
   cost_noise: 0.01        # EUR/MWh seeded random perturbation to break ties
-  degeneracy_sample: 40   # snapshots re-solved with a second noise seed
+  degeneracy_sample: 500  # snapshots re-solved with a second noise seed
   degeneracy_tol: 0.5     # EUR/MWh
   shedding_policy: exclude  # exclude | clip
 
@@ -67,12 +71,39 @@ spectrum:
 
 anneal:
   alpha: 1.0
-  lambda_c_final: 5.0
-  lambda_c_initial: 0.1
+  lambda_c_initial: 0.1   # start of the geometric lambda_c ramp (validated: higher freezes early)
+  lambda_c_final: auto    # auto = above any Potts+balance change -> contiguous final state
   lambda_b: 0.5
   balance_floor: 0.05
   restarts: 8
-  sweeps_per_temp: 20     # in units of the number of nodes
+  sweeps_per_temp: 20     # proposals per temperature, in units of the number of nodes
   n_temps: 60
-  t_final_ratio: 0.001
+  t_final_ratio: 0.01
+  quench_sweeps: 20
   seed: 12345
+
+# Marginal-cost table. INFERENCE: approximate 2025 annual-average market levels
+# (TTF gas, API2 coal, EUA carbon) and textbook heat rates; the author's
+# estimates, NOT verified against a published source in this session.
+# Plant-level efficiency from powerplantmatching is used where plausible.
+costs:
+  co2_eur_t: 70.0
+  fuel_eur_mwh_th: {gas: 36.0, coal: 11.0, lignite: 6.0, oil: 45.0}
+  emission_t_mwh_th: {gas: 0.20, coal: 0.34, lignite: 0.40, oil: 0.27}
+  carriers:
+    nuclear:   {mc: 10.0, availability: 0.85}
+    lignite:   {fuel: lignite, eff: 0.36, vom: 4.0, availability: 0.85, eff_range: [0.28, 0.46]}
+    coal:      {fuel: coal, eff: 0.40, vom: 4.0, availability: 0.85, eff_range: [0.30, 0.47]}
+    CCGT:      {fuel: gas, eff: 0.55, vom: 3.0, availability: 0.90, eff_range: [0.40, 0.63]}
+    OCGT:      {fuel: gas, eff: 0.38, vom: 5.0, availability: 0.90, eff_range: [0.28, 0.45]}
+    gas_steam: {fuel: gas, eff: 0.40, vom: 4.0, availability: 0.90, eff_range: [0.28, 0.50]}
+    oil:       {fuel: oil, eff: 0.35, vom: 5.0, availability: 0.90, eff_range: [0.25, 0.50]}
+    biomass:   {mc: 5.0, availability: 0.60}   # FiT-driven, runs ~flat: treated as cheap, capped at annual CF
+    geothermal: {mc: 5.0, availability: 0.80}
+    ror:       {mc: 0.0}                        # flat p_max_pu = national hydro CF (weather year)
+    reservoir: {mc: 45.0, availability: 0.90}   # water value; dispatchable to 90% (no energy limit: no storage)
+    onwind:    {mc: 0.0}
+    offwind:   {mc: 0.0}
+    solar:     {mc: 0.0}
+  hydro_cf_default: 0.45
+  hydro_cf_clip: [0.10, 0.80]
