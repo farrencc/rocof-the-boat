@@ -79,6 +79,14 @@
   "sha256": "2f298a6546e022126b1d7666fc0d5ac549aa0239f3fdb2521051d203dcba1a1c",
   "url": "https://gisco-services.ec.europa.eu/distribution/v2/nuts/geojson/NUTS_RG_01M_2024_4326_LEVL_3.geojson"
  },
+ "open_meteo_era5_2019": {
+  "accessed": "2026-09-29",
+  "bytes": null,
+  "file": "",
+  "notes": "323/323 points, models=era5, hourly wind_speed_100m,shortwave_radiation, 2019; sha256 over concatenated per-point JSON (sorted lat,lon); points in data/weather_points.csv",
+  "sha256": "9140e00fb45544d5fea274dc3f66d09a916cccd247aadcf34fe5cb479d2bed5c",
+  "url": "https://archive-api.open-meteo.com/v1/archive"
+ },
  "opsd_time_series_60min": {
   "accessed": "2026-09-29",
   "bytes": 130339665,

@@ -68,9 +68,9 @@ edges:
   duration_threshold: 1.0 # EUR/MWh
   quantile: 0.9
   dc_in_energy: true      # HVDC edges enter H with their dp and J = 0
-  dp_remedy: none         # none | clip | log1p | rank  (decided at the normalisation gate)
+  dp_remedy: clip         # none | clip | log1p | rank  (decided at the normalisation gate, reports/normalisation.md)
   dp_clip_q: 0.99
-  J_remedy: none
+  J_remedy: log1p         # reactance spans orders of magnitude: raw J skew up to 10.7
   J_clip_q: 0.99
   signal_min: 0.01        # country mean of the raw statistic below this = "no congestion signal"
 
