@@ -1,0 +1,36 @@
+{
+ "summary": {
+  "N": 3771,
+  "K": 90,
+  "Z": 25856.75957853668,
+  "mean_cap_mw": 308.55321692764534,
+  "Ltot_mw": 321345.99172451184,
+  "floor": 0.0016666666666666666,
+  "maxdeg": 15,
+  "Q_bytes": 452520,
+  "contiguity_guarantee": 10515.882613038533
+ },
+ "repro": {
+  "n_intra": 5186,
+  "n_static": 5186,
+  "n_matched": 5186,
+  "max_abs_diff_dp_duration": 0.0,
+  "max_abs_diff_dp_mean": 1.0355966750807966e-08,
+  "max_abs_diff_dp_quantile": 7.62939453125e-06,
+  "max_abs_diff_dp_n": 0.0,
+  "max_abs_diff_J_n": 0.0
+ },
+ "anchor_config_id": "a2_lc0.1_lb0.5_dk+0",
+ "alpha": 2.0,
+ "lambda_b": 0.5,
+ "isolated": [
+  "virtual_relation/9036573:0-225",
+  "virtual_way/1348774144:0-400",
+  "virtual_way/623828196:0-220",
+  "way/113757307-220",
+  "way/171251171-220",
+  "way/217032425-400",
+  "way/257192868-220",
+  "way/50729129-220"
+ ]
+}

@@ -6,3 +6,4 @@ data/solved/
 data/interim/
 .pytest_cache/
 logs/
+results/dbz/smoke/
