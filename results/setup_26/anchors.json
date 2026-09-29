@@ -1,0 +1,190 @@
+{
+  "scope": "26",
+  "branches": [
+    380,
+    462,
+    438,
+    458
+  ],
+  "orientation": [
+    1,
+    1,
+    1,
+    -1
+  ],
+  "threshold": 0.95,
+  "relievable_min_fraction": 0.5,
+  "anchor_seeds": [
+    11,
+    23,
+    42,
+    76,
+    101
+  ],
+  "thermal_scales": [
+    1.0,
+    0.95
+  ],
+  "k_by_threshold": {
+    "0.3": 1,
+    "0.4": 1,
+    "0.5": 2,
+    "0.6": 2,
+    "0.7": 2,
+    "0.8": 2,
+    "0.9": 2,
+    "0.95": 3
+  },
+  "k_by_threshold_literal": {
+    "0.3": 1,
+    "0.4": 1,
+    "0.5": 1,
+    "0.6": 1,
+    "0.7": 1,
+    "0.8": 1,
+    "0.9": 2,
+    "0.95": 3
+  },
+  "n_pe_anchors": 3,
+  "guard_log": [
+    {
+      "branches": [
+        380,
+        462,
+        438
+      ],
+      "new_failures_by_worst_monitor": {
+        "458": 37
+      }
+    },
+    {
+      "branches": [
+        380,
+        462,
+        438,
+        458
+      ],
+      "new_failures_by_worst_monitor": {}
+    },
+    {
+      "branches": [
+        380,
+        462,
+        438,
+        458
+      ],
+      "final_new_failures": 0
+    }
+  ],
+  "anchors": [
+    {
+      "k": 0,
+      "monitor": 380,
+      "branch_id": "3501-4001-1",
+      "name": "LANESBORO_A1 - MULLINGAR",
+      "s_nom_mva": 99.0,
+      "p_e": 0.49512505298855447,
+      "p_literal": 0.09664750774949556,
+      "relievable_frac": 1.0,
+      "orientation": 1,
+      "frac_pos_binding": 1.0,
+      "frac_pos_overload": 1.0,
+      "minority_direction_frac": 0.0,
+      "bidirectional_flag": false,
+      "n_variants": 504,
+      "n_binding_variants": 1,
+      "top_variant_outage": 450,
+      "top_variant_share": 1.0,
+      "sign_agreement_min": 0.9540229885057471,
+      "sign_agreement_binding_weighted": 1.0,
+      "nodes_sign_consistent_all_variants": 0.9080459770114943,
+      "corr_min_variant_vs_mean": 0.7232817620079324,
+      "n_helpful": 143,
+      "n_init": 41,
+      "init_mec_mw": 967.3100000000001,
+      "guard_anchor": false
+    },
+    {
+      "k": 1,
+      "monitor": 462,
+      "branch_id": "4501-4691-1",
+      "name": "PLATIN - OLDBRIDGE",
+      "s_nom_mva": 105.0,
+      "p_e": 0.4256040695209835,
+      "p_literal": 0.08307713851069654,
+      "relievable_frac": 1.0,
+      "orientation": 1,
+      "frac_pos_binding": 1.0,
+      "frac_pos_overload": 1.0,
+      "minority_direction_frac": 0.0,
+      "bidirectional_flag": false,
+      "n_variants": 1,
+      "n_binding_variants": 1,
+      "top_variant_outage": 202,
+      "top_variant_share": 1.0,
+      "sign_agreement_min": 1.0,
+      "sign_agreement_binding_weighted": 1.0,
+      "nodes_sign_consistent_all_variants": 1.0,
+      "corr_min_variant_vs_mean": 0.9999999999999998,
+      "n_helpful": 64,
+      "n_init": 40,
+      "init_mec_mw": 949.36,
+      "guard_anchor": false
+    },
+    {
+      "k": 2,
+      "monitor": 438,
+      "branch_id": "4041-4371-1",
+      "name": "MOY - GLENREE",
+      "s_nom_mva": 105.0,
+      "p_e": 0.07724916033521374,
+      "p_literal": 0.015078895275194612,
+      "relievable_frac": 1.0,
+      "orientation": 1,
+      "frac_pos_binding": 1.0,
+      "frac_pos_overload": 1.0,
+      "minority_direction_frac": 0.0,
+      "bidirectional_flag": false,
+      "n_variants": 2,
+      "n_binding_variants": 1,
+      "top_variant_outage": 71,
+      "top_variant_share": 1.0,
+      "sign_agreement_min": 1.0,
+      "sign_agreement_binding_weighted": 1.0,
+      "nodes_sign_consistent_all_variants": 1.0,
+      "corr_min_variant_vs_mean": 0.7029836744275425,
+      "n_helpful": 174,
+      "n_init": 42,
+      "init_mec_mw": 1027.6599999999999,
+      "guard_anchor": false
+    },
+    {
+      "k": 3,
+      "monitor": 458,
+      "branch_id": "4472-17431-1",
+      "name": "POOLBEG SOUT - CKMN",
+      "s_nom_mva": 267.0,
+      "p_e": 0.0,
+      "p_literal": 0.8048018229614211,
+      "relievable_frac": 0.021833301102301292,
+      "orientation": -1,
+      "frac_pos_binding": 0.0,
+      "frac_pos_overload": 0.0,
+      "minority_direction_frac": 0.0,
+      "bidirectional_flag": false,
+      "n_variants": 1,
+      "n_binding_variants": 1,
+      "top_variant_outage": 314,
+      "top_variant_share": 1.0,
+      "sign_agreement_min": 1.0,
+      "sign_agreement_binding_weighted": 1.0,
+      "nodes_sign_consistent_all_variants": 1.0,
+      "corr_min_variant_vs_mean": 1.0,
+      "n_helpful": 16,
+      "n_init": 16,
+      "init_mec_mw": 366.25,
+      "guard_anchor": true,
+      "guard_trigger_failures": 37
+    }
+  ]
+}
