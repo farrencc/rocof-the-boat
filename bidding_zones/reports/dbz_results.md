@@ -43,7 +43,8 @@ the other restarts; red star: A itself (not contiguous on the European graph, se
 
 |   λ_rigid |   physical |    Potts |   Σ(C−1) |   balance |   rigidity |        E |   transfer |   transfer % |   transfer MW |   ARI vs A |   zones |   multinat. |   size min |   size med |   size max |   ≥ floor |
 |----------:|-----------:|---------:|---------:|----------:|-----------:|---------:|-----------:|-------------:|--------------:|-----------:|--------:|------------:|-----------:|-----------:|-----------:|----------:|
-|         0 |   -6420.65 | -6424.98 |        0 |     8.654 |    8564.14 | -6420.65 |       2375 |         0.63 |        731329 |      0.251 |      90 |          30 |          1 |       20.5 |        298 |        66 |
+|       0   |   -6420.65 | -6424.98 |        0 |     8.654 |    8564.14 | -6420.65 |       2375 |        0.63  |        731329 |      0.251 |      90 |          30 |          1 |       20.5 |        298 |        66 |
+|       0.1 |   -6378.95 | -6385.09 |        0 |    12.271 |    3269.67 | -6051.98 |       1231 |        0.326 |        330928 |      0.669 |      90 |          35 |          1 |       20   |        292 |        62 |
 
 ## Where the cuts are
 
@@ -53,13 +54,15 @@ HVDC; `XB edges cut`: the share of cross-border edges that are still zone bounda
 
 |   λ_rigid |   cut edges |   cut: XB share |   cut w+: XB |   XB edges cut |   cut: DC share |   cut w+: DC |   A cuts kept |
 |----------:|------------:|----------------:|-------------:|---------------:|----------------:|-------------:|--------------:|
-|         0 |         949 |           0.059 |        0.093 |          0.318 |           0.012 |        0.026 |         0.608 |
+|       0   |         949 |           0.059 |        0.093 |          0.318 |           0.012 |        0.026 |         0.608 |
+|       0.1 |         898 |           0.088 |        0.126 |          0.449 |           0.017 |        0.028 |         0.699 |
 
 ## Restart spread, reproducibility, schedule
 
-|   λ_rigid |   restarts |   E spread |   gap 2nd |   ARI best/2nd |   ARI mean |   ARI min | best init   |   E best voronoi |   E best anchor-seeded |    T0 |   accept (first 10 %) | collapse < 1 %   |   s / restart |   wall s |
-|----------:|-----------:|-----------:|----------:|---------------:|-----------:|----------:|:------------|-----------------:|-----------------------:|------:|----------------------:|:-----------------|--------------:|---------:|
-|         0 |         12 |     70.054 |     6.998 |          0.242 |       0.25 |     0.207 | voronoi     |         -6420.65 |               -6413.65 | 5.214 |                 0.423 | False            |       150.153 |  462.119 |
+|   λ_rigid |   restarts |   E spread |   gap 2nd |   ARI best/2nd |   ARI mean |   ARI min | best init     |   E best voronoi |   E best anchor-seeded |    T0 |   accept (first 10 %) | collapse < 1 %   |   s / restart |   wall s |
+|----------:|-----------:|-----------:|----------:|---------------:|-----------:|----------:|:--------------|-----------------:|-----------------------:|------:|----------------------:|:-----------------|--------------:|---------:|
+|       0   |         12 |     70.054 |     6.998 |          0.242 |      0.25  |     0.207 | voronoi       |         -6420.65 |               -6413.65 | 5.214 |                 0.423 | False            |       150.153 |  462.119 |
+|       0.1 |         12 |    214.656 |    53.358 |          0.525 |      0.465 |     0.385 | anchor_seeded |         -5998.63 |               -6051.98 | 5.671 |                 0.429 | False            |       125.742 |  402.377 |
 
 ![acceptance](../figures/dbz/acceptance.png)
 
@@ -75,7 +78,8 @@ is an upper bound on the true cost of stability, not the cost itself.
 
 |   λ_rigid |   found: physical |   found: transfer |   found: E |   ref: physical |   ref: transfer |   ref: E |   E gap (found − ref) | ref dominates   |
 |----------:|------------------:|------------------:|-----------:|----------------:|----------------:|---------:|----------------------:|:----------------|
-|         0 |          -6420.65 |              2375 |   -6420.65 |         -6371.7 |              60 |  -6371.7 |                -48.94 | False           |
+|       0   |          -6420.65 |              2375 |   -6420.65 |        -6371.7  |              60 | -6371.7  |                -48.94 | False           |
+|       0.1 |          -6378.95 |              1231 |   -6051.98 |        -6365.98 |              51 | -6352.53 |                300.54 | False           |
 
 The reference never dominates the sweep's best restart.
 
@@ -84,4 +88,8 @@ The reference never dominates the sweep's best restart.
 ### λ_rigid = 0
 
 ![zones](../figures/dbz/zones_lr0.png)
+
+### λ_rigid = 0.1
+
+![zones](../figures/dbz/zones_lr0.1.png)
 

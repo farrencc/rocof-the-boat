@@ -1,0 +1,11 @@
+{
+ "lambda_rigid": 0.1,
+ "wall_s": 402.3767321109772,
+ "schedule": {
+  "n_temps": 80,
+  "sweeps_per_temp": 500.0,
+  "quench_sweeps": 20.0,
+  "restarts": 12
+ },
+ "anchor_config_id": "a2_lc0.1_lb0.5_dk+0"
+}
