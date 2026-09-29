@@ -1,0 +1,12 @@
+[c12_structural_only] E0=0.0000 D0=6.7473  T_start=0.1423 T_end=0.001018 alpha=0.98
+[c12_structural_only] step   25 T=0.08587 E=0.3235 D=6.3597 best E=-0.0983 (D=6.7465) best D=6.2303 acc=9/25 infeas=8 calls=666 sizes=[31, 43, 50, 14]
+[c12_structural_only] step   50 T=0.05182 E=-3.6203 D=6.1762 best E=-3.6203 (D=6.1762) best D=6.1762 acc=10/25 infeas=8 calls=1291 sizes=[31, 21, 41, 13]
+[c12_structural_only] step   75 T=0.03127 E=-11.9515 D=5.9626 best E=-12.0263 (D=6.1245) best D=5.9617 acc=5/25 infeas=8 calls=1916 sizes=[25, 2, 43, 13]
+[c12_structural_only] step  100 T=0.01887 E=-15.0781 D=5.8138 best E=-15.0781 (D=5.8138) best D=5.7063 acc=2/25 infeas=12 calls=2541 sizes=[21, 1, 29, 13]
+[c12_structural_only] step  125 T=0.01139 E=-16.4862 D=5.7057 best E=-16.4862 (D=5.7057) best D=5.6757 acc=3/25 infeas=11 calls=3166 sizes=[8, 1, 23, 13]
+[c12_structural_only] step  150 T=0.006872 E=-17.1372 D=5.7142 best E=-17.1451 (D=5.7132) best D=5.6757 acc=0/25 infeas=11 calls=3791 sizes=[2, 1, 18, 13]
+[c12_structural_only] step  175 T=0.004147 E=-18.1461 D=5.6902 best E=-18.1461 (D=5.6902) best D=5.6757 acc=0/25 infeas=12 calls=4416 sizes=[1, 1, 16, 13]
+[c12_structural_only] step  200 T=0.002503 E=-19.7360 D=5.6349 best E=-19.7360 (D=5.6349) best D=5.6349 acc=1/25 infeas=12 calls=5041 sizes=[1, 1, 12, 13]
+[c12_structural_only] step  225 T=0.00151 E=-30.5774 D=5.6620 best E=-30.5774 (D=5.6620) best D=5.6061 acc=0/25 infeas=9 calls=5666 sizes=[7, 1, 5, 13]
+[c12_structural_only] step  245 T=0.001008 E=-32.8295 D=5.7468 best E=-32.8295 (D=5.7468) best D=5.6061 acc=0/25 infeas=9 calls=6166 sizes=[11, 1, 1, 13]
+[c12_structural_only] done in 56.4s
