@@ -1,0 +1,55 @@
+# Scenario-conditioned national dynamical bidding zones (bzgen/ndbz/).
+# Overlay: deep-merged over config/default.yaml by bzgen.ndbz.load_config().
+# Nothing here changes a key the static pipeline reads, so static results are unaffected.
+
+ndbz:
+  anchor_config_id: a2_lc0.1_lb0.5_dk+0   # status-quo map A = sweep.headline
+  results_dir: results/ndbz
+  figures_dir: figures/ndbz
+
+scenario:
+  names: [baseline, peak_demand, dunkelflaute, wind_surplus, max_dispersion]
+  scope: country            # country | europe: whose outlier hours define the subset
+  q: 0.01                   # top-q share of hours (peak_demand, wind_surplus, max_dispersion)
+  min_snapshots: 200        # hours of weight; q (or the dunkelflaute quantiles) is widened to reach it
+  dunkelflaute:
+    vre_q: 0.10             # bottom decile of VRE (wind + solar) capacity factor ...
+    load_q: 0.3333          # ... and top tercile of load
+    widen_step: 0.05        # both quantiles widened by this step until min_snapshots is reached
+  clip_handling: as_is      # as_is | exclude_clipped (drop edge-hours with an endpoint at the clip) | unclipped (solved prices before the clip)
+  normalisation: baseline   # baseline (own-quantile clip, full-year country mean) | baseline_refclip (clip threshold also full-year) | self (renormalise per scenario)
+  bootstrap:
+    n: 500
+    seed: 7
+    ci: 0.95
+    thin_ratio: 0.5         # CI width of the country-mean statistic / between-edge std above this = too thin
+  clip_material:            # as_is vs exclude_clipped "disagree materially" if either holds
+    spearman_min: 0.9       # rank correlation of the per-edge statistic below this
+    mean_rel_change: 0.2    # relative change of the country mean above this
+
+  # Decision (step-1 checkpoint, reports/ndbz_scenarios.md): the clip is material in these
+  # countries, so the re-zoning there is also run with the unclipped prices and both reported.
+  clip_robustness:
+    countries: [FR, NO, SE]
+    handling: unclipped
+  skip_no_signal: true      # countries without a full-year congestion signal are not re-zoned
+
+anneal:
+  # Balance floor as a fraction of the mean zone share: floor = frac / k (as in config/dbz.yaml).
+  # 0.15 / 3 = 0.05 reproduces the static absolute floor at k = 3 (28 of 31 countries);
+  # null = the static absolute anneal.balance_floor.
+  balance_floor_frac_of_mean: 0.15
+  T0_band: [0.001, 1000.0]  # initial temperature sanity band: fail loudly outside it
+
+rigidity:
+  lambda: [0.1, 0.3, 1.0, 3.0, 10.0]
+  seed_offset: 10000        # restart r of a cell uses the static seed formula + seed_offset + r
+
+animate:
+  enabled: false            # opt-in: the production sweep pays nothing for frame capture
+  restart: best             # which restart to animate: best (re-run with capture, bit-identical) or an index
+  fps: 10
+  hold_s: 1.0               # the last frames are held this long
+  quench_frames: 20         # frames captured through the T = 0 quench
+  dpi: 72
+  mp4: true                 # also write .mp4 (needs imageio-ffmpeg)
