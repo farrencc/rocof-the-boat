@@ -137,7 +137,7 @@ def fig1_line458(c: Ctx):
                 fontsize=9, color=INK)
     lim = d.limit
     ax.axvline(-lim, color=RED, ls="--", lw=1.2)
-    ax.text(-lim, len(vals) - 0.35, f"  limit −{lim:.0f} MW", color=RED, fontsize=8.5, va="bottom")
+    ax.text(-lim, -0.55, f"  limit −{lim:.0f} MW", color=RED, fontsize=8.5, va="center")
     ax.axvline(0, color=MUTED, lw=1)
     ax.set_yticks(y, labels)
     ax.set_xlim(min(vals) * 1.35, max(vals) * 1.6)
@@ -153,7 +153,7 @@ def fig1_line458(c: Ctx):
     ren = kind[order] == 0
     ax.axhspan(0, sens.max() * 1.15, color="#e8f1fc", zorder=0)
     ax.text(3, sens.max() * 1.05, "helps relieve", color=BLUE, fontsize=8.5, va="top")
-    ax.text(3, sens.min() * 0.95, "makes it worse", color=RED, fontsize=8.5, va="bottom")
+    ax.text(len(sens) * 0.55, sens.min() * 0.3, "below 0: makes it worse", color=RED, fontsize=8.5, va="center")
     ax.scatter(x[ren], sens[order][ren], s=10, color=MUTED, label="wind / solar farm")
     ax.scatter(x[~ren], sens[order][~ren], s=42, marker="s", color=ORANGE, edgecolor="white", lw=1,
                label="conventional unit")
@@ -200,8 +200,10 @@ def fig2_anchor_ranking(c: Ctx):
     axes[0].set_yticks(y, names, fontsize=8.5)
     axes[0].set_title("Binding: argmax at each relief step")
     axes[1].set_title("Overloaded before any relief")
-    handles = [Line2D([], [], color=BLUE, lw=8, label="anchor (≥1% on either measure)"),
-               Line2D([], [], color=RED, lw=8, label="guard anchor (458)"),
+    handles = [Line2D([], [], color=BLUE, lw=8, label="anchor (≥1% on either measure)")]
+    if guard:
+        handles.append(Line2D([], [], color=RED, lw=8, label="guard anchor"))
+    handles += [
                Line2D([], [], color=MUTED, lw=8, label="relievable, below 1%"),
                Line2D([], [], color=FAINT, lw=8, label="no grouping can relieve it")]
     axes[1].legend(handles=handles, loc="lower right", fontsize=8.5)
@@ -218,7 +220,7 @@ def fig2_anchor_ranking(c: Ctx):
 def fig3_anchor_map(c: Ctx):
     fig, axes = plt.subplots(1, 2, figsize=(12, 7), gridspec_kw={"width_ratios": [1.15, 1]})
     for ax, zoom, title in ((axes[0], None, "All anchors"),
-                            (axes[1], ((-6.9, -5.95), (53.15, 53.8)), "Dublin & north-east (zoom)")):
+                            (axes[1], ((-6.75, -6.0), (53.2, 53.78)), "Dublin & north-east (zoom)")):
         c.backdrop(ax, zoom)
         n = c.nodes
         ax.scatter(n.longitude, n.latitude, s=6, color=FAINT, zorder=2)
@@ -309,12 +311,12 @@ def fig5_validation(c: Ctx):
                 color=INK2)
     ax.set_yticks(y, labels, fontsize=8)
     ax.set_xlabel("renewable dispatch-down (% of available energy)")
-    ax.set_title("Dispatch-down on fresh seeds")
-    ax.legend(loc="lower right", fontsize=8.5)
+    ax.set_title("Dispatch-down on fresh seeds", pad=28)
+    ax.legend(loc="lower left", bbox_to_anchor=(0, 1.06), ncol=2, fontsize=8.5)
     ax = axes[1]
     ax.barh(y, opt.loc[idx, "C"], color=ORANGE, height=0.55)
     ax.set_xlabel("conventional redispatch\n(% of renewable potential)")
-    ax.set_title("Cost moved to plant")
+    ax.set_title("Cost moved to plant", pad=28)
     ax = axes[2]
     ax.scatter(base.security_pct, y, s=40, color=MUTED)
     ax.scatter(opt.loc[idx, "security_pct"], y, s=40, color=BLUE, marker="D")
@@ -323,11 +325,13 @@ def fig5_validation(c: Ctx):
         if n_:
             ax.text(opt.security_pct.max() + 0.3, yy, f"{int(n_)} new", color=RED, fontsize=8, va="center")
     ax.set_xlabel("snapshots secure after relief (%)")
-    ax.set_title("Security")
+    ax.set_title("Security", pad=28)
     for a in axes:
         a.grid(axis="y", visible=False)
     s = c.vsum.loc[best]
-    fig.suptitle(f"Anchored groups cut dispatch-down by {-s.dD_vs_wdt_pp:.2f} pp ({-s.dD_vs_wdt_pct:.1f}%) out of sample",
+    w0 = c.vsum.loc["wdt_multi"]
+    fig.suptitle(f"Anchored groups cut wind/solar dispatch-down by {-s.dD_vs_wdt_pct:.0f}% and raise security "
+                 f"from {w0.security_mean:.0f}% to {s.security_mean:.0f}% of snapshots",
                  x=0.01, ha="left", fontsize=13, fontweight="bold", y=1.03)
     _subtitle(fig, f"Configuration {c.best_cid}; 5 unseen weather seeds × 3 thermal ratings, identical frozen cases "
                    f"for both groupings.", y=0.985)
@@ -343,8 +347,13 @@ def fig6_tradeoff(c: Ctx):
     rows["cid"] = rows.index.str.split(":").str[0]
     fig, ax = plt.subplots(figsize=(8.5, 5.6))
     ax.scatter(rows.C_mean, rows.D_mean, s=70, color=BLUE, edgecolor="white", lw=1.5, zorder=3)
+    keep = {"dd_only": "renewable DD only", "dd_conv": "DD + conv. cost", "base": "base", "P2": "λ_P=2 (headline)",
+            "structural_only": "structural only", "N0": "λ_N=0"}
     for _, r in rows.iterrows():
-        lab = r.cid.split("_", 1)[1].replace("_", " ")
+        key = r.cid.split("_", 1)[1]
+        if key not in keep:
+            continue
+        lab = keep[key]
         ax.annotate(lab, (r.C_mean, r.D_mean), xytext=(6, 3), textcoords="offset points", fontsize=8, color=INK2)
     w = vs.loc["wdt_multi"]
     ax.scatter([w.C_mean], [w.D_mean], s=160, marker="*", color=INK, zorder=4)
@@ -356,7 +365,7 @@ def fig6_tradeoff(c: Ctx):
     ax.set_xlabel("conventional redispatch used for relief (% of renewable potential)")
     ax.set_ylabel("renewable dispatch-down (%)")
     ax.set_title("Each λ setting trades wind curtailment against plant redispatch", fontsize=12)
-    fig.text(0.01, -0.02, "Validation means. Labels are the λ changed from the base (λ_DD=1, λ_S=λ_V=λ_P=0.5, "
+    fig.text(0.01, -0.02, "Validation means; unlabelled dots are the other one-at-a-time λ changes. Base (λ_DD=1, λ_S=λ_V=λ_P=0.5, "
                           "λ_N=0.1, λ_C=0.5).", fontsize=8.5, color=INK2)
     fig.tight_layout()
     fig.savefig(c.out / "fig6_lambda_tradeoff.png")
@@ -449,7 +458,7 @@ def fig9_sigma(c: Ctx):
     ax.legend(handles=[Line2D([], [], marker="o", ls="", color=MUTED, label="initial group"),
                        Line2D([], [], marker="o", ls="", color=BLUE, label="optimised group"),
                        Line2D([], [], color=INK, lw=2, label="capacity-weighted mean")], fontsize=8.5,
-              loc="upper right")
+              loc="upper center", bbox_to_anchor=(0.5, -0.32), ncol=3)
     ax.set_title("How strongly each member helps its own anchor line")
     fig.tight_layout()
     fig.savefig(c.out / "fig9_sigma_by_group.png")

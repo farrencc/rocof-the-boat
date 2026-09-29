@@ -119,3 +119,38 @@ Everything below is inherited from upstream (`ciangregg/EIEG_Hackathon26`,
 - One annealing chain per configuration (seed 0). No restarts, so run-to-run variance
   is not quantified.
 - 26-county only so far.
+
+## v2 additions (conventional plant, SNSP, fairness, distributed slack)
+
+- **[decision] Conventional units as nodes.** All 15 units in the 26-county file are
+  members except the largest (the balance unit, Great Island): 14 nodes. They
+  down-regulate pro-rata toward p_min, so their "available" MW is their down-room. Their
+  redispatch is **not** dispatch-down; it is the separate term T6 (λ_C), reported
+  everywhere. Up-regulation (counter-trading) is not modelled.
+- **Missing plant.** The file has only 3.5 GW of conventional plant, 12 units with
+  carrier "unknown". Poolbeg, Dublin Bay and Huntstown 1 appear to be absent.
+- **[decision] SNSP ≤ 75%**, before the network is checked: excess renewables are cut
+  pro-rata and replaced by conventional plant in merit order. **It never binds** with
+  this synthetic weather (max SNSP 62.8%), so it has no effect on the results.
+- **[decision] Distributed slack.** Replacement MW is shared by all conventional units in
+  proportion to p_nom (a fixed participation vector). The single balance bus exceeded
+  Great Island's 464.5 MW in about 45% of snapshots once plant joined groups. The
+  headroom of the units picking up the replacement is still not enforced.
+- **Carrickmines phase-shifter** (transformer T1742-17431) is fixed at 0° in the data and
+  treated as a plain reactance.
+- **[decision] Fairness:** hard minimum of 5 nodes per group (moves and random probes
+  respect it), with base λ_N = 0.1.
+- **[decision] Showcase anchors:** a stressed ensemble (ratings 100/95/90%); every
+  relievable line with ≥ 1% of binding events *or* of pre-relief overloads (11 lines).
+  Lines that never bind take orientation and variant weights from their pre-relief
+  overloads. Maynooth B – Ryebrook shows only 57% sign agreement across its outage
+  variants.
+- **[ours] Feasibility repair** (greedy single flips) is available, but was not needed
+  with the distributed slack.
+- **[decision] Headline rule:** lowest validation D + C among groupings with no new
+  failures.
+- **Deferred, at the owner's request: constraint generation.** Adding post-relief
+  overloaded (monitor, outage) pairs to the screen and re-annealing. Unscreened
+  overloads remain, and are reported in
+  `results/v2_26/validation/full_network_unscreened_overloads.csv`.
+- **Shorter schedule:** α = 0.98, 25 moves per temperature, one chain per config.

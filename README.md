@@ -10,6 +10,61 @@ Upstream ([ciangregg/EIEG_Hackathon26](https://github.com/ciangregg/EIEG_Hackath
 no LICENSE) is **never copied**. It is cloned into the gitignored `external/` folder and
 imported only by `src/upstream.py`.
 
+## v2 model (current): conventional plant, SNSP, fairness, 11 anchor lines
+
+v2 answers four review points:
+1. **Nodes are real farms.** Each of the 174 renewable nodes is one wind or solar farm
+   (sometimes one phase of a farm), not an average. v2 adds the 14 conventional units as
+   group members. They act by turning **down** to p_min, and that redispatch is priced
+   by a separate term T6 (λ_C), not counted as dispatch-down. SNSP is capped at 75%
+   before the network is checked; see the finding below. Fairness comes from λ_N = 0.1
+   plus a **hard minimum of 5 nodes per group**.
+2. **Branch 458 (Poolbeg S – Carrickmines) is explained** (`figures/v2/fig1`). The
+   overload is caused by demand pulling power into Dublin. With only wind and solar
+   allowed to act, 0% of its overloads can be relieved. With conventional plant it is
+   88%, and 100% with a distributed slack. The Carrickmines phase-shifter is fixed at 0°
+   in the data, and the 26-county file lacks most Dublin generation.
+3. **11 anchor lines** from a stressed ensemble (ratings 100/95/90%), each with its own
+   group (`fig3`, `fig4`).
+4. **New figures** are in `figures/v2/`, explained in [`docs/figures.md`](docs/figures.md).
+
+**Headline (validation, fresh seeds; config `d13_P2`, chosen for lowest D + C with no new
+failures):**
+
+| grouping | renewable DD % | conv. redispatch % | secure snapshots % | new failures | unscreened >100% pairs (max) |
+|---|---|---|---|---|---|
+| WDT today (multi-membership) | 6.80 | 0 | 49.3 | — | 10 (108%) |
+| initial anchored groups | 6.87 | 5.89 | 82.8 | 0 | 30 (112%) |
+| **optimised `d13_P2`** | **4.88 (−28%)** | 6.24 | **82.1** | **0** | 15 (113%) |
+| renewable-DD-only λ | 4.50 | 10.42 | 68.3 | 1 | 23 (112%) |
+
+- **Renewable dispatch-down falls 28%, and security rises from 49% to 82% of snapshots.**
+- **The total MW moved (DD + C) goes up, from 6.8% to 11.1%.** Most of the extra
+  redispatch pays for relieving overloads that WDT leaves unrelieved: WDT has no
+  conventional plant in its groups and gives up on half the snapshots. There is no
+  like-for-like secure baseline, so read D and C together, never D alone.
+- **Two things were found and fixed on the way.**
+  - **Balance-bus replacement:** replacing everything at Great Island exceeded its
+    464.5 MW rating in about 45% of snapshots and overloaded its exit lines (up to
+    167%). That run is archived in `results/v2_26_balance_slack/`. v2 now shares the
+    replacement across all conventional units by capacity (the distributed slack).
+  - **Anchor orientation:** anchors that never bind now take their overload direction
+    from pre-relief overloads.
+- **Open issues.**
+  - **The SNSP cap never binds:** synthetic SNSP peaks at 62.8%.
+  - **Constraint generation is deferred:** it was requested for later. The frozen 90%
+    screen still misses a few overloads (15 pairs, up to 113%, for the headline).
+
+Reproduce v2 (after the setup below):
+
+```bash
+python src/sweep.py --version v2 --scope 26 --alpha 0.98 --sweeps 25   # 15 configs, ~13 min on 4 cores
+python src/validate.py --version v2 --scope 26                          # ~3 min
+python src/report.py --scope 26                                         # figures/v2/
+```
+
+The v1 write-up below is kept for reference.
+
 ## Reproduce from a clean clone
 
 ```bash
