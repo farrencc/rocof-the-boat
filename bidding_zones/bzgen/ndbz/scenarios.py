@@ -556,3 +556,41 @@ def params_table(scns: list[Scenario]) -> pd.DataFrame:
 
 def dumps(obj) -> str:
     return json.dumps(obj, indent=1, default=float)
+
+
+# --------------------------------------------------------------------------- #
+# persisted scenario tables -> the annealer's edge table
+# --------------------------------------------------------------------------- #
+
+def persisted_path(cfg: dict):
+    from bzgen import config
+    return config.ROOT / cfg["ndbz"]["results_dir"] / "scenarios" / "edges.parquet"
+
+
+def scenario_edges(cfg: dict, name: str, scope: str | None = None, clip_handling: str | None = None,
+                   normalisation: str | None = None, static: pd.DataFrame | None = None,
+                   long: pd.DataFrame | None = None) -> pd.DataFrame:
+    """Static ``results/edges.parquet`` with ``dp_n`` replaced by the scenario's (from
+    ``results/ndbz/scenarios/edges.parquet``, written by ``report scenarios``), so the
+    annealer runs on a fresh clone without ``data/solved/``.  J_n, topology, edge ids
+    are the static ones by construction."""
+    from bzgen import config
+    sc = cfg["scenario"]
+    scope = scope or sc["scope"]
+    ch = clip_handling or sc["clip_handling"]
+    mode = normalisation or sc["normalisation"]
+    if name == "baseline":
+        scope = "country"                      # one baseline, whatever the scope
+    static = pd.read_parquet(config.ROOT / "results" / "edges.parquet") if static is None else static
+    long = pd.read_parquet(persisted_path(cfg)) if long is None else long
+    t = long[(long.scope == scope) & (long.scenario == name) & (long.clip_handling == ch)]
+    if t.empty:
+        raise KeyError(f"no persisted scenario table for {(scope, name, ch)}: "
+                       "run `python -m bzgen.ndbz.report scenarios`")
+    t = t.set_index("edge_id")
+    out = static.loc[static.index.intersection(t.index)].copy()
+    out["dp_n"] = t.loc[out.index, f"dp_n_{mode}"].to_numpy()
+    out["dp_raw"] = t.loc[out.index, "stat"].to_numpy()
+    out["no_signal"] = t.loc[out.index, "no_signal"].to_numpy()
+    out.attrs.update(scenario=name, scope=scope, clip_handling=ch, normalisation=mode)
+    return out

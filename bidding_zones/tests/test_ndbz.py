@@ -606,3 +606,189 @@ def test_balance_floor_parameterisations_agree_at_k3():
     assert balance_floor({**cfg["anneal"], "balance_floor_frac_of_mean": None}, 2) == \
         static["anneal"]["balance_floor"]
     assert balance_floor(cfg["anneal"], 2) == pytest.approx(0.075)
+
+
+# --------------------------------------------------------------------------- #
+# tests 1, 11, 12: the forked annealer
+# --------------------------------------------------------------------------- #
+
+from bzgen.cluster import anneal as static_anneal
+from bzgen.cluster.anneal import CountryGraph, contiguity_guarantee, energy_terms, graph_voronoi
+from bzgen.ndbz import anneal as NA
+
+
+def _toy(n=90, k=4, seed=3):
+    import networkx as nx
+    G = nx.random_geometric_graph(n, 0.2, seed=seed)
+    comps = list(nx.connected_components(G))
+    for a, b in zip(comps[:-1], comps[1:]):
+        G.add_edge(next(iter(a)), next(iter(b)))
+    e = np.array(G.edges())
+    rng = np.random.default_rng(seed)
+    g = CountryGraph(n, e[:, 0], e[:, 1], rng.normal(0, 1, len(e)), rng.exponential(1, n),
+                     rng.exponential(1, n) * (rng.random(n) < 0.4))
+    A = graph_voronoi(g, k, np.random.default_rng(seed + 1))
+    cap = rng.exponential(200.0, n) * (rng.random(n) < 0.7)
+    Z = R.normaliser(cap, k)[0]
+    return g, k, A, cap, Z
+
+
+SCHED = dict(lam_b=0.5, floor=0.05, n_temps=25, sweeps_per_temp=8, t_final_ratio=0.01)
+
+
+@pytest.mark.parametrize("seed", [1, 7, 123])
+def test_fork_reproduces_static_annealer_exactly(seed):
+    """Test 1, strict form: lambda_rigid = 0 with the static schedule follows the
+    static RNG stream, so labels, energy terms and trace are bit-identical to
+    ``bzgen.cluster.anneal.anneal``.  The fork did not change the physics."""
+    g, k, A, cap, Z = _toy()
+    s = static_anneal.anneal(g, k, SCHED["lam_b"], 0.1, "auto", SCHED["floor"], SCHED["n_temps"],
+                             SCHED["sweeps_per_temp"], SCHED["t_final_ratio"], seed=seed)
+    x = NA.anneal_ndbz(g, k, A, cap, Z, 0.0, seed=seed, mode="static", lam_c0=0.1, **SCHED)
+    np.testing.assert_array_equal(x["labels"], s["labels"])
+    assert (x["potts"], x["contig"], x["balance"], x["energy"]) == \
+        (s["potts"], s["contig"], s["balance"], s["energy"])
+    np.testing.assert_array_equal(x["trace"][:, :5], s["trace"])
+    assert x["T0"] == s["T0"]
+
+
+def test_bookkeeping_matches_full_recomputation():
+    g, k, A, cap, Z = _toy()
+    for lr in (0.0, 0.3, 3.0):
+        for blocks in (False, True):
+            x = NA.anneal_ndbz(g, k, A, cap, Z, lr, seed=5, blocks=blocks, **SCHED)
+            ep, cs, pb = energy_terms(x["labels"], k, g.ptr, g.idx, g.w, g.Lnode, g.Gnode, g.Ltot,
+                                      SCHED["floor"])
+            assert x["potts"] == pytest.approx(ep, abs=1e-9)
+            assert x["contig"] == cs == 0
+            assert x["balance"] == pytest.approx(pb, abs=1e-12)
+            assert x["rigid"] == pytest.approx(R.rigidity_full(x["labels"], A, cap, k, k) / Z, abs=1e-9)
+            assert np.bincount(x["labels"], minlength=k).min() >= 1
+
+
+def test_block_moves_reach_the_anchor_at_high_rigidity():
+    """At large lambda_rigid the optimum is ~A; single flips alone get stuck in
+    pair-counting local minima, the anchor-block moves do not (bzgen/ndbz/anneal.py)."""
+    g, k, A, cap, Z = _toy()
+    ref = NA.reference_quench(g, k, A, cap, Z, 30.0, SCHED["lam_b"], SCHED["floor"])
+    best = min(NA.anneal_ndbz(g, k, A, cap, Z, 30.0, seed=s, **SCHED)["energy"] for s in range(3))
+    assert best <= ref["energy"] + 1e-9
+
+
+def test_reference_quench_from_anchor_is_contiguous():
+    g, k, A, cap, Z = _toy()
+    r = NA.reference_quench(g, k, A, cap, Z, 1.0, SCHED["lam_b"], SCHED["floor"])
+    assert r["contig"] == 0
+
+
+def test_T0_default_path_unchanged():
+    g, k, A, cap, Z = _toy()
+    lab = graph_voronoi(g, k, np.random.default_rng(0))
+    f = lambda **kw: static_anneal.initial_temperature(g, lab, k, 0.5, 7.0, 0.05,
+                                                       np.random.default_rng(4), **kw)
+    assert f() == f(exclude_contiguity=False)
+    assert f(exclude_contiguity=True) == static_anneal.initial_temperature(
+        g, lab, k, 0.5, 0.0, 0.05, np.random.default_rng(4))
+    # the nDBZ T0 at lambda_rigid = 0 is exactly initial_temperature(exclude_contiguity=True)
+    t = NA.initial_temperature_ndbz(g, lab, k, 0.5, 0.05, np.random.default_rng(4), A, cap, 0.0)
+    assert t == f(exclude_contiguity=True)
+
+
+def test_T0_band_fails_loudly():
+    g, k, A, cap, Z = _toy()
+    with pytest.raises(RuntimeError, match="T0"):
+        NA.anneal_ndbz(g, k, A, cap, Z, 0.0, seed=1, T0_band=(1e3, 1e4), **SCHED)
+
+
+def test_frames():
+    """Test 12, strict: the final frame is the returned labelling, the frame count
+    follows the stride, and capture on/off is bit-identical (the buffer does not
+    touch the RNG stream)."""
+    g, k, A, cap, Z = _toy()
+    for lr in (0.0, 1.0):
+        on = NA.anneal_ndbz(g, k, A, cap, Z, lr, seed=9, capture=True, quench_frames=7, **SCHED)
+        off = NA.anneal_ndbz(g, k, A, cap, Z, lr, seed=9, capture=False, **SCHED)
+        np.testing.assert_array_equal(on["labels"], off["labels"])
+        np.testing.assert_array_equal(on["trace"], off["trace"])
+        for key in ("potts", "contig", "balance", "rigid", "energy", "T0"):
+            assert on[key] == off[key]
+        assert off["frames"].shape == (0, g.n)
+        np.testing.assert_array_equal(on["frames"][-1], on["labels"])
+        qsteps = int(20.0 * g.n)
+        stride = on["quench_stride"]
+        assert stride == max(1, qsteps // 7)
+        assert on["frames"].shape == (NA.n_frames(SCHED["n_temps"], qsteps, stride), g.n)
+        assert on["frames"].shape[0] == SCHED["n_temps"] + (qsteps - 1) // stride + 1
+        # per-temperature frames carry the trace's temperature and rigidity
+        np.testing.assert_array_equal(on["frame_meta"][:SCHED["n_temps"], 0], on["trace"][:-1, 0])
+        np.testing.assert_allclose(on["frame_meta"][:SCHED["n_temps"], 5], on["trace"][:-1, 5])
+        assert on["frame_meta"][-1, 5] == pytest.approx(on["rigid"])
+        # every frame is a valid labelling with no empty zone
+        assert all(np.bincount(f, minlength=k).min() >= 1 for f in on["frames"])
+
+
+def test_country_seed_is_deterministic_and_distinct():
+    s = [NA.country_seed("IE", 12345, 10000, r) for r in range(12)]
+    assert len(set(s)) == 12 and s == [NA.country_seed("IE", 12345, 10000, r) for r in range(12)]
+    assert NA.country_seed("IE", 12345, 0, 0) != s[0]
+
+
+# --- real data: test 1 against results/sweep.csv, test 11 T0 band -------------
+
+@pytest.fixture(scope="module")
+def ctx():
+    from bzgen.ndbz import sweep as SW
+    return SW.load_context(load_config())
+
+
+needs_solved = pytest.mark.skipif(
+    not (DATA and (config.ROOT / "data" / "solved" / "gen_mean.csv").exists()
+         and S.persisted_path(load_config()).exists()),
+    reason="data/interim + data/solved + results/ndbz/scenarios needed")
+
+
+@needs_solved
+def test_static_reproduction_against_sweep_csv(ctx):
+    """Test 1 on the real graphs: lambda_rigid = 0, baseline scenario, static schedule
+    and floor.  The static seeds used Python's randomised ``hash(c)`` and cannot be
+    replayed, so: the best of 3 restarts lies within the recorded restart range
+    [E_min - spread, E_max] of results/sweep.csv for every country."""
+    from bzgen.ndbz import sweep as SW
+    cfg = ctx.cfg
+    a = cfg["anneal"]
+    rows = pd.read_csv(config.ROOT / "results" / "sweep.csv")
+    rows = rows[rows.config_id == cfg["ndbz"]["anchor_config_id"]].set_index("country")
+    for c in rows.index:
+        g, nodes, host, anc, _, _ = SW.country_problem(ctx, c, "baseline")
+        E = min(NA.anneal_ndbz(g, anc.k, anc.A, anc.cap, anc.Z, 0.0, ctx.params["lambda_b"],
+                               a["balance_floor"], a["n_temps"], a["sweeps_per_temp"],
+                               a["t_final_ratio"], seed=NA.country_seed(c, a["seed"], 0, r),
+                               quench_sweeps=a["quench_sweeps"], mode="static",
+                               lam_c0=ctx.params["lambda_c_initial"])["energy"] for r in range(3))
+        r = rows.loc[c]
+        assert r.E_min - max(r.E_spread, 1e-6 * abs(r.E_min)) - 1e-9 <= E <= r.E_max + 1e-9, (c, E, r.E_min, r.E_max)
+
+
+@needs_solved
+def test_T0_in_band_for_every_country_and_scenario(ctx):
+    """Test 11: with lambda_c at the contiguity guarantee, the physical-term T0 is in the
+    sane band everywhere; with the guarantee in the sampled dE it would not be."""
+    from bzgen.ndbz import sweep as SW
+    lo, hi = ctx.cfg["anneal"]["T0_band"]
+    for sc in ctx.cfg["scenario"]["names"]:
+        for c, anc in ctx.anchors.items():
+            try:
+                g, nodes, host, anc, floor, _ = SW.country_problem(ctx, c, sc)
+            except SW.ScenarioUndefined:
+                assert (sc, c) == ("wind_surplus", "AL")
+                continue
+            lab = graph_voronoi(g, anc.k, np.random.default_rng(0))
+            lam_c = contiguity_guarantee(g, ctx.params["lambda_b"])
+            T0 = static_anneal.initial_temperature(g, lab, anc.k, ctx.params["lambda_b"], lam_c,
+                                                   floor, np.random.default_rng(1),
+                                                   exclude_contiguity=True)
+            assert np.isfinite(T0) and lo < T0 < hi, (sc, c, T0)
+            for lr in ctx.cfg["rigidity"]["lambda"]:
+                T = NA.initial_temperature_ndbz(g, lab, anc.k, ctx.params["lambda_b"], floor,
+                                                np.random.default_rng(1), anc.A, anc.cap, lr / anc.Z)
+                assert np.isfinite(T) and lo < T < hi, (sc, c, lr, T)
