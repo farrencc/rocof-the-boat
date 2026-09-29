@@ -47,6 +47,7 @@ the other restarts; red star: A itself (not contiguous on the European graph, se
 |       0.1 |   -6378.95 | -6385.09 |        0 |    12.271 |    3269.67 | -6051.98 |       1231 |        0.326 |      330928   |      0.669 |      90 |          35 |          1 |       20   |        292 |        62 |
 |       0.3 |   -6337.94 | -6342.09 |        0 |     8.298 |    1686.73 | -5831.92 |        697 |        0.185 |      165358   |      0.829 |      90 |          40 |          1 |       19   |        356 |        66 |
 |       1   |   -6222.92 | -6228.05 |        0 |    10.254 |    1142.66 | -5080.27 |        449 |        0.119 |       98438.1 |      0.865 |      90 |          27 |          1 |       19   |        343 |        67 |
+|       3   |   -6072.12 | -6082.47 |        0 |    20.689 |    1446.2  | -1733.52 |        518 |        0.137 |      158561   |      0.876 |      90 |          20 |          1 |       25.5 |        358 |        56 |
 
 ## Where the cuts are
 
@@ -60,6 +61,7 @@ HVDC; `XB edges cut`: the share of cross-border edges that are still zone bounda
 |       0.1 |         898 |           0.088 |        0.126 |          0.449 |           0.017 |        0.028 |         0.699 |
 |       0.3 |         866 |           0.105 |        0.133 |          0.517 |           0.018 |        0.037 |         0.8   |
 |       1   |         861 |           0.135 |        0.149 |          0.659 |           0.022 |        0.04  |         0.86  |
+|       3   |         832 |           0.144 |        0.15  |          0.682 |           0.022 |        0.035 |         0.845 |
 
 ## Restart spread, reproducibility, schedule
 
@@ -69,6 +71,7 @@ HVDC; `XB edges cut`: the share of cross-border edges that are still zone bounda
 |       0.1 |         12 |    214.656 |    53.358 |          0.525 |      0.465 |     0.385 | anchor_seeded |         -5998.63 |               -6051.98 | 5.671 |                 0.429 | False            |       125.742 |  402.377 |
 |       0.3 |         12 |    373.256 |    35.999 |          0.804 |      0.747 |     0.638 | anchor_seeded |         -5795.92 |               -5831.92 | 4.965 |                 0.4   | False            |       124.772 |  400.129 |
 |       1   |         12 |   1006.7   |   184.294 |          0.855 |      0.795 |     0.74  | anchor_seeded |         -4895.97 |               -5080.27 | 6.599 |                 0.351 | False            |       119.972 |  372.241 |
+|       3   |         12 |   2961.69  |   228.712 |          0.808 |      0.785 |     0.71  | voronoi       |         -1733.52 |               -1504.81 | 9.382 |                 0.271 | False            |       110.596 |  353.012 |
 
 ![acceptance](../figures/dbz/acceptance.png)
 
@@ -88,8 +91,9 @@ is an upper bound on the true cost of stability, not the cost itself.
 |       0.1 |          -6378.95 |              1231 |   -6051.98 |        -6365.98 |              51 | -6352.53 |                300.54 | False           |
 |       0.3 |          -6337.94 |               697 |   -5831.92 |        -6362.42 |              43 | -6327.66 |                495.74 | True            |
 |       1   |          -6222.92 |               449 |   -5080.27 |        -6331.45 |              28 | -6275.26 |               1194.99 | True            |
+|       3   |          -6072.12 |               518 |   -1733.52 |        -6307.47 |              20 | -6187.26 |               4453.74 | True            |
 
-**The reference dominates the sweep's result (better physical objective *and* smaller transfer distance) at 2 of 4 λ values.** The annealer, started away from A with λ_c pinned, does not find the anchored basin under single-node and fragment moves. Where this holds, read the front as what this search finds, not as the Pareto frontier.
+**The reference dominates the sweep's result (better physical objective *and* smaller transfer distance) at 3 of 5 λ values.** The annealer, started away from A with λ_c pinned, does not find the anchored basin under single-node and fragment moves. Where this holds, read the front as what this search finds, not as the Pareto frontier.
 
 ## Zone maps
 
@@ -108,4 +112,8 @@ is an upper bound on the true cost of stability, not the cost itself.
 ### λ_rigid = 1
 
 ![zones](../figures/dbz/zones_lr1.png)
+
+### λ_rigid = 3
+
+![zones](../figures/dbz/zones_lr3.png)
 
