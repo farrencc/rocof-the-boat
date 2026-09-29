@@ -179,71 +179,50 @@ def _clean(ax):
 
 
 def readable_panels(df: pd.DataFrame, der: float, tag: str) -> list:
-    """The derating panel as two stand-alone figures with plain-language labels."""
+    """The derating panel as two short, stand-alone figures."""
     d = df[np.isclose(df.derating, der)].sort_values("alpha").copy()
     d["pct"] = 100 * d.dDD_RES_GWh / d.DD_k1_GWh
-    _, oos = derating_panel(df, der, tag)
     x = np.arange(len(d))
     lab = [f"{a:g}" for a in d.alpha]
-    xl = "Zone-drawing setting: coupling strength α\n(low = zones follow price gaps, high = zones follow strong grid links)"
-    cap_trade = (f"Trading capacity between zones is set to {der:.0%} of the physical line capacity. "
-                 "Germany is split into 3 zones in every case.")
+    note = f"Zone trading capacity {der:.0%} of line capacity. 3 zones. 200 sample hours."
     out = []
 
-    fig, ax = plt.subplots(figsize=(7.5, 5.2))
-    ax.bar(x, d.dDD_RES_GWh / 1e3, 0.6, color="#2a78d6", edgecolor="white",
-           label="Quick scan: 200 sample hours, map drawn from the same year")
-    for xi, v, pc in zip(x, d.dDD_RES_GWh / 1e3, d.pct):
-        ax.text(xi, v + (0.05 if v >= 0 else -0.05), f"{v:+.1f} TWh\n({pc:+.0f}%)", ha="center",
-                va="bottom" if v >= 0 else "top", fontsize=8, color="#0b0b0b")
-    if oos is not None and oos["alpha"] in list(d.alpha):
-        i = list(d.alpha).index(oos["alpha"])
-        ax.errorbar(i + 0.38, oos["dDD_RES_GWh"] / 1e3,
-                    yerr=[[(oos["dDD_RES_GWh"] - oos["dDD_RES_lo"]) / 1e3],
-                          [(oos["dDD_RES_hi"] - oos["dDD_RES_GWh"]) / 1e3]],
-                    fmt="o", color="#eb6834", ms=7, capsize=4, lw=2,
-                    label="Proper test: map drawn on half the year, tested on the other half\n(with 95% uncertainty range)")
+    fig, ax = plt.subplots(figsize=(6.4, 4.2))
+    v = d.dDD_RES_GWh.to_numpy() / 1e3
+    ax.bar(x, v, 0.6, color="#2a78d6", edgecolor="white")
+    for xi, vi, pc in zip(x, v, d.pct):
+        ax.text(xi, vi + (0.05 if vi >= 0 else -0.05), f"{vi:+.1f} TWh\n({pc:+.0f}%)", ha="center",
+                va="bottom" if vi >= 0 else "top", fontsize=8, color="#0b0b0b")
     ax.axhline(0, color="#52514e", lw=1)
     lo, hi = ax.get_ylim()
-    ax.set_ylim(lo - 0.2 * (hi - lo), hi + 0.1 * (hi - lo))
+    ax.set_ylim(lo - 0.15 * (hi - lo), hi + 0.12 * (hi - lo))
     ax.set_xticks(x, lab)
-    ax.set_xlabel(xl, fontsize=9, color="#52514e")
-    ax.set_ylabel("Change in wind and solar turned down\n(TWh per year, split minus single zone)",
-                  fontsize=9, color="#52514e")
-    ax.set_title("Does splitting Germany into 3 bidding zones waste less wind and solar?",
-                 fontsize=11, color="#0b0b0b", loc="left")
+    ax.set_xlabel("Coupling α", fontsize=9, color="#52514e")
+    ax.set_ylabel("Change in curtailed wind + solar (TWh/yr)", fontsize=9, color="#52514e")
+    ax.set_title("Splitting DE vs one zone (below 0 = less curtailment)", fontsize=10,
+                 color="#0b0b0b", loc="left")
     _clean(ax)
-    ax.legend(fontsize=8, frameon=False, loc="upper center", bbox_to_anchor=(0.5, -0.24))
-    fig.text(0.01, 0.01, textwrap.fill(
-        "Below zero = less wind and solar turned down than with Germany as one zone. " + cap_trade
-        + " Exploratory: settings were searched, so the quick-scan reductions may be chance; "
-        "the proper test is the one to trust.", 125), fontsize=7.5, color="#52514e", va="bottom")
-    fig.tight_layout(rect=(0, 0.08, 1, 1))
+    fig.text(0.01, 0.01, note, fontsize=7.5, color="#52514e", va="bottom")
+    fig.tight_layout(rect=(0, 0.04, 1, 1))
     f1 = ROOT / "figures" / "validate" / f"readable_dd_change_d{der:g}.png"
     fig.savefig(f1, dpi=150)
     plt.close(fig)
     out.append(f1)
 
-    fig, ax = plt.subplots(figsize=(7.5, 5.2))
+    fig, ax = plt.subplots(figsize=(6.4, 4.2))
     sp, rd = d.dSpill_market_GWh.to_numpy() / 1e3, d.dRedispatch_down_res_GWh.to_numpy() / 1e3
-    ax.bar(x, sp, 0.6, color="#eb6834", edgecolor="white",
-           label="Market curtailment: wind and solar the market could not sell across zone borders")
-    ax.bar(x, rd, 0.6, color="#1baf7a", edgecolor="white",
-           label="Redispatch down: wind and solar the grid operator turned down to relieve congested lines")
-    ax.plot(x, sp + rd, "o", color="#0b0b0b", ms=6, label="Net change (the two added together)")
+    ax.bar(x, sp, 0.6, color="#eb6834", edgecolor="white", label="Market curtailment")
+    ax.bar(x, rd, 0.6, color="#1baf7a", edgecolor="white", label="Redispatch down")
+    ax.plot(x, sp + rd, "o", color="#0b0b0b", ms=6, label="Net change")
     ax.axhline(0, color="#52514e", lw=1)
     ax.set_xticks(x, lab)
-    ax.set_xlabel(xl, fontsize=9, color="#52514e")
-    ax.set_ylabel("Change compared with Germany as one zone\n(TWh per year)", fontsize=9, color="#52514e")
-    ax.set_title("Where the change comes from: market versus grid operator",
-                 fontsize=11, color="#0b0b0b", loc="left")
+    ax.set_xlabel("Coupling α", fontsize=9, color="#52514e")
+    ax.set_ylabel("Change vs one zone (TWh/yr)", fontsize=9, color="#52514e")
+    ax.set_title("Where the change comes from", fontsize=10, color="#0b0b0b", loc="left")
     _clean(ax)
-    ax.legend(fontsize=8, frameon=False, loc="upper center", bbox_to_anchor=(0.5, -0.24))
-    fig.text(0.01, 0.01, textwrap.fill(
-        "Splitting moves some turn-down from the grid operator to the market. It saves wind and "
-        "solar only when the grid operator's cut (green) is bigger than the market's rise (orange). "
-        + cap_trade + " Quick scan: 200 sample hours.", 125), fontsize=7.5, color="#52514e", va="bottom")
-    fig.tight_layout(rect=(0, 0.08, 1, 1))
+    ax.legend(fontsize=8, frameon=False, loc="lower left")
+    fig.text(0.01, 0.01, note, fontsize=7.5, color="#52514e", va="bottom")
+    fig.tight_layout(rect=(0, 0.04, 1, 1))
     f2 = ROOT / "figures" / "validate" / f"readable_dd_sources_d{der:g}.png"
     fig.savefig(f2, dpi=150)
     plt.close(fig)
