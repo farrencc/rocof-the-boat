@@ -5,6 +5,7 @@ input is listed with its URL, access date and SHA-256 of the cached file.
 
 | key | URL | accessed | bytes | sha256 | notes |
 |---|---|---|---|---|---|
+| `electricitymaps_zones` | https://raw.githubusercontent.com/electricitymaps/electricitymaps-contrib/809539d5c76de19291ff6cb7766aca0f583dd826/geo/world.geojson | 2026-09-29 | 2568315 | `d1bcf7d3c68ba8ab…` | Electricity Maps electricitymaps-contrib geo/world.geojson at commit 809539d5c76de19291ff6cb7766aca0f583dd826; curated open zone geometry, NOT an ENTSO-E publication (fallback: no authoritative bidding-zone polygons reachable) |
 | `eurostat_demo_r_pjanaggr3` | https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data/demo_r_pjanaggr3?format=TSV&compressed=true | 2026-09-29 | 2019779 | `eacde2505c811c0a…` | Eurostat population on 1 January by broad age group, sex and NUTS 3, SDMX TSV |
 | `eurostat_nama_10r_3gdp` | https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data/nama_10r_3gdp?format=TSV&compressed=true | 2026-09-29 | 743572 | `3cccb6e2f2f66958…` | Eurostat nama_10r_3gdp, SDMX TSV (full dataset) |
 | `eurostat_nama_10r_3popgdp` | https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data/nama_10r_3popgdp?format=TSV&compressed=true | 2026-09-29 | 123058 | `a56a5993001e1057…` | Eurostat nama_10r_3popgdp, SDMX TSV (full dataset) |

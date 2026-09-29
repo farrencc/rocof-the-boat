@@ -128,3 +128,38 @@ sweep:
   headline: a2_lc0.1_lb0.5_dk+0   # largest alpha with >= 95% of zones above the balance floor (reports/results.md)
   degeneracy_rel_tol: 0.001   # restarts within this relative energy of the best are "near-degenerate"
   degenerate_ari: 0.9         # ... and flagged degenerate if their map differs (ARI below this)
+
+# Validation stage (bzgen/validate/): does splitting DE into zones reduce dispatch down?
+# Zonal market (stage A, ATC transport model) + nodal redispatch (stage B), DE split vs DE = 1 zone.
+validate:
+  focus: DE                 # cluster-country whose map is tested (LU is merged into it: DE-LU is one real zone)
+  split_real: ["SE", "NO", "DK", "IT"]   # split by real bidding zones (polygon join); every other country = one zone
+  zones_source:
+    # INFERENCE/FALLBACK: no ENTSO-E-published polygon set is reachable from this session;
+    # Electricity Maps' curated open geometry, pinned to a commit. Flagged in reports/validate.md.
+    url: https://raw.githubusercontent.com/electricitymaps/electricitymaps-contrib/809539d5c76de19291ff6cb7766aca0f583dd826/geo/world.geojson
+    commit: 809539d5c76de19291ff6cb7766aca0f583dd826
+    # Electricity Maps zone key -> ENTSO-E-style short name. Italy: 6 zones as in the brief;
+    # CALA (separate since 2021) is not in this geometry and stays inside IT-SUD (flagged).
+    rename: {SE-SE1: SE1, SE-SE2: SE2, SE-SE3: SE3, SE-SE4: SE4,
+             NO-NO1: NO1, NO-NO2: NO2, NO-NO3: NO3, NO-NO4: NO4, NO-NO5: NO5,
+             DK-DK1: DK1, DK-DK2: DK2,
+             IT-NO: IT-NORD, IT-CNO: IT-CNOR, IT-CSO: IT-CSUD, IT-SO: IT-SUD, IT-SIC: IT-SICI, IT-SAR: IT-SARD}
+  deratings: [0.2, 0.5, 0.7, 1.0]   # inter-zone ATC = derating * sum(s_nom * s_max_pu) over cut AC branches
+  reference_derating: 0.7   # INFERENCE: derating at which headline numbers are quoted (bands span all)
+  markup: 1.0               # EUR/MWh on both redispatch directions
+  n_siblings: 3
+  sibling_rel_tol: 0.01     # widened from sweep.degeneracy_rel_tol (0 DE restarts within 0.001; user decision)
+  scoring: [oos_even, insample]   # oos_even primary: maps refit on odd ISO weeks, scored on even weeks
+  alt_weather_year: {enabled: false, year: 2018}   # optional OOS: fixed map, other weather year (not run)
+  res_carriers: [onwind, offwind, solar]           # "RES" = wind and solar
+  pocket_hour_share: 0.5    # chronic load pocket: sheds (> solve.shed_tol_mw) in >= this share of nodal hours
+  dual_tol: 1.0e-3          # EUR/MWh; |shadow price| above this = binding branch
+  cost_tol_rel: 1.0e-6      # relative tolerance of the cost-bound assertions (plus cost_tol_abs)
+  cost_tol_abs: 10.0        # EUR per hour
+  spill_tol_mw: 0.01        # entries below this are not persisted (sparse tables)
+  bootstrap: {resamples: 1000, ci: 0.95, seed: 12345}
+  # INFERENCE: order of magnitude quoted in the brief, NOT sourced (bundesnetzagentur.de, smard.de and
+  # netztransparenz.de are blocked by this session's egress policy).
+  bnetza_redispatch_twh: [20.0, 30.0]
+  persist_p_zonal: true     # dense [snapshot x generator] float32; large

@@ -49,7 +49,7 @@ class DCOPF:
         # scaled by S = median(b): phi = S theta, so the matrix holds b/S
         # (~1e-3..1e2) instead of b (~1e2..3e6), which HiGHS otherwise fails on.
         b_pu = 1.0 / (L.x.to_numpy() / v ** 2)
-        self.S = float(np.median(b_pu))
+        self.S = float(np.median(b_pu)) if NL else 1.0   # no lines: zonal transport model
         self.bl = b_pu / self.S
         self.l0, self.l1 = l0, l1
         self.Fmax = (L.s_nom * s_max_pu).to_numpy()
@@ -112,10 +112,28 @@ class DCOPF:
     def set_costs(self, costs: np.ndarray) -> None:
         self.h.changeColsCost(self.G, self.gidx, costs.astype(float))
 
-    def solve(self, pmax: np.ndarray, load: np.ndarray) -> dict:
-        """pmax: MW upper bound per generator; load: MW per bus. Returns prices etc."""
+    def add_gen_rows(self, rows: list[np.ndarray], lo: np.ndarray, hi: np.ndarray,
+                     coef: list[np.ndarray] | None = None) -> None:
+        """Append linear rows over generator columns: lo_r <= sum_{g in rows[r]} coef p_g <= hi_r.
+        Their duals are returned as ``extra_dual`` by :meth:`solve` (duals=True)."""
+        starts, idx, val = [], [], []
+        for r, g in enumerate(rows):
+            starts.append(len(idx))
+            idx += list(np.asarray(g, dtype=np.int32))
+            val += list(np.ones(len(g)) if coef is None else np.asarray(coef[r], dtype=float))
+        self.h.addRows(len(rows), np.asarray(lo, float), np.asarray(hi, float), len(idx),
+                       np.asarray(starts, dtype=np.int32), np.asarray(idx, dtype=np.int32),
+                       np.asarray(val, dtype=float))
+        self.n_extra = getattr(self, "n_extra", 0) + len(rows)
+
+    def solve(self, pmax: np.ndarray, load: np.ndarray, pmin: np.ndarray | None = None,
+              duals: bool = False) -> dict:
+        """pmax (pmin): MW upper (lower, default 0) bound per generator; load: MW per bus.
+        Returns prices etc.; with ``duals`` also line-row duals, link-column reduced costs
+        and the duals of rows added by :meth:`add_gen_rows`."""
         h = self.h
-        h.changeColsBounds(self.G, self.gidx, np.zeros(self.G), pmax.astype(float))
+        lo = np.zeros(self.G) if pmin is None else pmin.astype(float)
+        h.changeColsBounds(self.G, self.gidx, lo, pmax.astype(float))
         h.changeRowsBounds(self.N, self.bidx, load.astype(float), load.astype(float))
         h.run()
         st = h.getModelStatus()
@@ -139,7 +157,13 @@ class DCOPF:
         x = np.asarray(sol.col_value)
         y = np.asarray(sol.row_dual)
         th = x[self.G:self.G + self.N]
-        return {"status": "ok", "retry": retry, "price": y[:self.N].copy(), "p": x[:self.G].copy(),
-                "line_p": self.bl * (th[self.l0] - th[self.l1]),
-                "link_p": x[self.G + self.N:].copy(),
-                "objective": h.getInfo().objective_function_value}
+        out = {"status": "ok", "retry": retry, "price": y[:self.N].copy(), "p": x[:self.G].copy(),
+               "line_p": self.bl * (th[self.l0] - th[self.l1]),
+               "link_p": x[self.G + self.N:].copy(),
+               "objective": h.getInfo().objective_function_value}
+        if duals:
+            z = np.asarray(sol.col_dual)
+            out["line_mu"] = y[self.N:self.N + self.NL].copy()
+            out["link_mu"] = z[self.G + self.N:].copy()
+            out["extra_dual"] = y[self.N + self.NL:].copy()
+        return out

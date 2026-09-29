@@ -1,4 +1,12 @@
 {
+ "electricitymaps_zones": {
+  "accessed": "2026-09-29",
+  "bytes": 2568315,
+  "file": "data/cache/electricitymaps/world_809539d5c76d.geojson",
+  "notes": "Electricity Maps electricitymaps-contrib geo/world.geojson at commit 809539d5c76de19291ff6cb7766aca0f583dd826; curated open zone geometry, NOT an ENTSO-E publication (fallback: no authoritative bidding-zone polygons reachable)",
+  "sha256": "d1bcf7d3c68ba8abf8e531375400748c0ddb7b72875c7dbddbd717644edaa923",
+  "url": "https://raw.githubusercontent.com/electricitymaps/electricitymaps-contrib/809539d5c76de19291ff6cb7766aca0f583dd826/geo/world.geojson"
+ },
  "eurostat_demo_r_pjanaggr3": {
   "accessed": "2026-09-29",
   "bytes": 2019779,
