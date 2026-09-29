@@ -5,7 +5,9 @@ Edges
 Built exactly as ``bzgen.cluster.edges.edge_table`` (parallel AC lines merged,
 ``J = sum 1/x``, ``s_nom`` summed; HVDC links with ``J = 0``, dropped where an
 AC corridor already joins the pair) except that lines and links whose two buses
-lie in different cluster-countries are **kept**.  Extra columns:
+lie in different cluster-countries are **kept**, and parallel HVDC links are
+merged too (two cross-border corridors have two links each; the static table
+never contained a parallel HVDC pair).  Extra columns:
 
 * ``country_a``, ``country_b``: ``cluster_country`` of ``bus_a`` / ``bus_b``;
 * ``is_cross``: ``country_a != country_b``;
@@ -61,9 +63,16 @@ def edge_table(buses: pd.DataFrame, lines: pd.DataFrame, links: pd.DataFrame) ->
     ac["is_dc"] = False
     a = np.where(links.bus0 < links.bus1, links.bus0, links.bus1)
     b = np.where(links.bus0 < links.bus1, links.bus1, links.bus0)
-    dc = pd.DataFrame({"bus_a": a, "bus_b": b, "J": 0.0, "s_nom": links.p_nom.values,
-                       "n_lines": 1, "line_ids": links.index.values,
-                       "is_dc": True}).set_index(["bus_a", "bus_b"])
+    dc = pd.DataFrame({"bus_a": a, "bus_b": b, "s_nom": links.p_nom.values,
+                       "n_lines": 1, "line_ids": links.index.values})
+    # Parallel HVDC links are merged like parallel AC lines.  The static table never
+    # needed this: its only parallel links cross a border and were dropped.  A
+    # duplicated CSR neighbour breaks the annealer's contiguity counter (it assumes
+    # distinct seeds), so the merge is required, not cosmetic.
+    dc = dc.groupby(["bus_a", "bus_b"]).agg(s_nom=("s_nom", "sum"), n_lines=("n_lines", "sum"),
+                                            line_ids=("line_ids", lambda s: ";".join(s)))
+    dc["J"] = 0.0
+    dc["is_dc"] = True
     dc = dc[~dc.index.isin(ac.index)]      # an AC corridor already joins the pair
     out = pd.concat([ac, dc]).reset_index()
     out["country_a"] = out.bus_a.map(cc).to_numpy()
@@ -206,6 +215,10 @@ class EuropeGraph(CountryGraph):
         self.Z = 2.0 * n / self.K * self.gbar
         if not (np.isfinite(self.Z) and self.Z > 0):
             raise ValueError(f"rigidity scale Z={self.Z} (n={n}, K={K}, mean cap={self.gbar})")
+        # no parallel edges: count_components_among needs distinct neighbour seeds
+        dup = (np.diff(self.idx) == 0) & (np.diff(np.repeat(np.arange(n), np.diff(self.ptr))) == 0)
+        if dup.any():
+            raise ValueError(f"{int(dup.sum())} duplicate CSR entries (parallel edges): merge them")
         # per-CSR-entry flags, in the same (lexsorted) order as idx / w
         i = np.concatenate([edges_i, edges_j]).astype(np.int64)
         j = np.concatenate([edges_j, edges_i]).astype(np.int64)

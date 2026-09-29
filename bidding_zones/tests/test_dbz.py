@@ -211,3 +211,219 @@ def test_transfer_distance_toy():
     assert AN.transfer_distance(B, A) == 0
     B = np.array([0, 0, 1, 1, 1, 1, 2, 2])          # one node changed zone
     assert AN.transfer_distance(B, A) == 1
+
+
+# --------------------------------------------------------------------------- #
+# 4-6. rigidity
+# --------------------------------------------------------------------------- #
+
+from bzgen.dbz import rigidity as RG  # noqa: E402
+
+
+def mirkin_direct(B, A, cap):
+    """Definition: sum_i g_i |BZ_B(i) symdiff BZ_A(i)|."""
+    s = 0.0
+    for i in range(len(B)):
+        inB = B == B[i]
+        inA = A == A[i]
+        s += cap[i] * np.count_nonzero(inB ^ inA)
+    return s
+
+
+def _caps(kind, n, rng):
+    if kind == "ones":
+        return np.ones(n)
+    c = rng.exponential(100.0, n)
+    c[rng.random(n) < 0.4] = 0.0
+    return c
+
+
+@pytest.mark.parametrize("kind", ["ones", "random"])
+@pytest.mark.parametrize("seed", range(3))
+def test_rigidity_full_matches_definition(kind, seed):
+    rng = np.random.default_rng(seed)
+    n, KA, KB = 60, 5, 6
+    A = rng.integers(0, KA, n)
+    B = rng.integers(0, KB, n)
+    cap = _caps(kind, n, rng)
+    assert RG.rigidity_full(B, A, cap, KB, KA) == pytest.approx(mirkin_direct(B, A, cap))
+
+
+@pytest.mark.parametrize("kind", ["ones", "random"])
+@pytest.mark.parametrize("seed", range(3))
+def test_rigidity_incremental_single(kind, seed):
+    rng = np.random.default_rng(seed)
+    n, KA, KB = 60, 5, 5
+    A = rng.integers(0, KA, n)
+    B = rng.integers(0, KB, n)
+    cap = _caps(kind, n, rng)
+    t = RG.build_tables(B, A, cap, KB, KA)
+    H = RG.rigidity_full(B, A, cap, KB, KA)
+    for step in range(3000):
+        i = int(rng.integers(n))
+        q = int(rng.integers(KB))
+        p = int(B[i])
+        d = RG.rigidity_delta(p, q, A[i], cap[i], *t)
+        RG.rigidity_apply(p, q, A[i], cap[i], *t) if p != q else None
+        B[i] = q
+        H += d
+        if step % 250 == 0:
+            ref = RG.rigidity_full(B, A, cap, KB, KA)
+            assert H == pytest.approx(ref, rel=1e-9, abs=1e-6)
+    assert H == pytest.approx(RG.rigidity_full(B, A, cap, KB, KA), rel=1e-9, abs=1e-6)
+    assert RG.rigidity_from_tables(*t) == pytest.approx(H, rel=1e-9, abs=1e-6)
+
+
+@pytest.mark.parametrize("kind", ["ones", "random"])
+@pytest.mark.parametrize("seed", range(3))
+def test_rigidity_incremental_fragment(kind, seed):
+    """Whole-component moves: move a random subset of one zone to another at once."""
+    rng = np.random.default_rng(seed)
+    n, KA, KB = 60, 5, 5
+    A = rng.integers(0, KA, n)
+    B = rng.integers(0, KB, n)
+    cap = _caps(kind, n, rng)
+    t = RG.build_tables(B, A, cap, KB, KA)
+    H = RG.rigidity_full(B, A, cap, KB, KA)
+    fa = np.zeros(KA, np.int64); fn = np.zeros(KA, np.int64); fg = np.zeros(KA)
+    for step in range(2000):
+        p = int(rng.integers(KB))
+        pool = np.flatnonzero(B == p)
+        if len(pool) == 0:
+            continue
+        members = rng.choice(pool, size=int(rng.integers(1, len(pool) + 1)), replace=False)
+        q = int(rng.integers(KB))
+        m, NF, GF = RG.fragment_profile(members.astype(np.int64), A, cap, fa, fn, fg)
+        d = RG.rigidity_delta_fragment(p, q, fa, m, fn, fg, NF, GF, *t)
+        if p != q:
+            RG.rigidity_apply_fragment(p, q, fa, m, fn, fg, NF, GF, *t)
+        RG.fragment_clear(fa, m, fn, fg)
+        assert not fn.any() and not fg.any()
+        B[members] = q
+        H += d
+        if step % 200 == 0:
+            assert H == pytest.approx(RG.rigidity_full(B, A, cap, KB, KA), rel=1e-9, abs=1e-6)
+    assert H == pytest.approx(RG.rigidity_full(B, A, cap, KB, KA), rel=1e-9, abs=1e-6)
+    # a single-node fragment agrees with the single-node delta
+    i = 0
+    m, NF, GF = RG.fragment_profile(np.array([i]), A, cap, fa, fn, fg)
+    q = (B[i] + 1) % KB
+    assert (RG.rigidity_delta_fragment(B[i], q, fa, m, fn, fg, NF, GF, *t)
+            == pytest.approx(RG.rigidity_delta(B[i], q, A[i], cap[i], *t)))
+    RG.fragment_clear(fa, m, fn, fg)
+
+
+def test_rigidity_known_values():
+    rng = np.random.default_rng(0)
+    A = rng.integers(0, 4, 40)
+    cap = rng.exponential(1.0, 40)
+    assert RG.rigidity_full(A, A, cap, 4, 4) == 0.0
+    # relabelling B's zones does not change the penalty
+    perm = np.array([2, 0, 3, 1])
+    assert RG.rigidity_full(perm[A], A, cap, 4, 4) == 0.0
+    # hand-computed toy: A = {0,1 | 2,3}, B = {0 | 1,2,3}, capacities g = (1, 2, 3, 4)
+    #   i=0: B {0},     A {0,1}  -> symdiff {1}       -> 1 * 1
+    #   i=1: B {1,2,3}, A {0,1}  -> symdiff {0,2,3}   -> 2 * 3
+    #   i=2: B {1,2,3}, A {2,3}  -> symdiff {1}       -> 3 * 1
+    #   i=3: same as i=2                                -> 4 * 1
+    A = np.array([0, 0, 1, 1]); B = np.array([0, 1, 1, 1]); g = np.array([1.0, 2.0, 3.0, 4.0])
+    assert RG.rigidity_full(B, A, g, 2, 2) == pytest.approx(1 + 6 + 3 + 4)
+    # load-only nodes (g = 0) contribute nothing to the outer sum but count inside it
+    g0 = np.array([1.0, 0.0, 0.0, 0.0])
+    assert RG.rigidity_full(B, A, g0, 2, 2) == pytest.approx(1.0)
+    # each node's term |B(i) symdiff A(i)| is symmetric, so the weighted sum is too
+    assert RG.rigidity_full(A, B, g, 2, 2) == RG.rigidity_full(B, A, g, 2, 2)
+
+
+# --------------------------------------------------------------------------- #
+# 8. T0 with lambda_c pinned; the DBZ annealer's bookkeeping
+# --------------------------------------------------------------------------- #
+
+from bzgen.cluster.anneal import (contiguity_guarantee, energy_terms,  # noqa: E402
+                                  graph_voronoi, initial_temperature)
+from bzgen.dbz import anneal as DA  # noqa: E402
+
+
+def _toy_europe(n=150, seed=3, K=6):
+    import networkx as nx
+    G = nx.random_geometric_graph(n, 0.16, seed=seed)
+    comps = list(nx.connected_components(G))
+    for a, b in zip(comps[:-1], comps[1:]):
+        G.add_edge(next(iter(a)), next(iter(b)))
+    rng = np.random.default_rng(seed)
+    e = np.array(G.edges())
+    w = rng.normal(0.3, 1.0, len(e))
+    L = rng.exponential(1.0, n)
+    Gn = rng.exponential(1.0, n) * (rng.random(n) < 0.3)
+    cap = rng.exponential(50.0, n) * (rng.random(n) < 0.5)
+    g = DG.EuropeGraph(n, e[:, 0], e[:, 1], w, L, Gn, cap, K)
+    A = graph_voronoi(g, K, np.random.default_rng(seed + 1))
+    return g, A
+
+
+def test_T0_exclude_contiguity():
+    g, A = _toy_europe()
+    K = int(A.max()) + 1
+    lam_c = contiguity_guarantee(g, 0.5)
+    lab = graph_voronoi(g, K, np.random.default_rng(0))
+    T_fix = initial_temperature(g, lab, K, 0.5, lam_c, 0.02, np.random.default_rng(1),
+                                exclude_contiguity=True)
+    assert np.isfinite(T_fix) and 1e-3 < T_fix < 1e3
+    # default path unchanged: identical to passing lambda_c explicitly, and exclusion
+    # equals the default with lambda_c = 0
+    T_def = initial_temperature(g, lab, K, 0.5, lam_c, 0.02, np.random.default_rng(1))
+    T_zero = initial_temperature(g, lab, K, 0.5, 0.0, 0.02, np.random.default_rng(1))
+    assert T_fix == T_zero
+    assert T_def >= T_fix       # contiguity-breaking samples only add uphill energy
+
+
+@pytest.mark.parametrize("lam_r", [0.0, 1.0, 10.0])
+def test_dbz_anneal_bookkeeping(lam_r):
+    """Incremental totals of _run_dbz equal full recomputation; result contiguous; K kept."""
+    g, A = _toy_europe()
+    K = int(A.max()) + 1
+    r = DA.anneal_dbz(g, A, K, lam_b=0.5, floor=0.15 / K, lam_rigid=lam_r, n_temps=12,
+                      sweeps_per_temp=5, t_final_ratio=0.01, seed=7, quench_sweeps=3)
+    lab = r["labels"]
+    ep, cs, pb = energy_terms(lab, K, g.ptr, g.idx, g.w, g.Lnode, g.Gnode, g.Ltot, 0.15 / K)
+    assert r["potts"] == pytest.approx(ep, abs=1e-8)
+    assert r["contig"] == cs == 0
+    assert r["balance"] == pytest.approx(pb, abs=1e-8)
+    assert r["rigid_raw"] == pytest.approx(RG.rigidity_full(lab, A, g.cap, K, K), rel=1e-9)
+    assert len(np.unique(lab)) == K
+
+
+def test_rigidity_pulls_towards_anchor():
+    g, A = _toy_europe()
+    K = int(A.max()) + 1
+    kw = dict(lam_b=0.5, floor=0.15 / K, n_temps=15, sweeps_per_temp=5, t_final_ratio=0.01,
+              seed=11, quench_sweeps=3)
+    free = DA.anneal_dbz(g, A, K, lam_rigid=0.0, **kw)
+    stiff = DA.anneal_dbz(g, A, K, lam_rigid=50.0, **kw)
+    assert AN.transfer_distance(stiff["labels"], A) < AN.transfer_distance(free["labels"], A)
+
+
+@need_interim
+def test_european_edge_table_has_no_parallel_edges(network):
+    eu = DG.edge_table(*network)
+    assert not eu.duplicated(["bus_a", "bus_b"]).any()
+    assert (eu.n_lines > 1).any()
+
+
+def test_europe_graph_rejects_parallel_edges():
+    with pytest.raises(ValueError, match="duplicate"):
+        DG.EuropeGraph(3, np.array([0, 0, 1]), np.array([1, 1, 2]), np.zeros(3), np.ones(3),
+                       np.zeros(3), np.ones(3), 2)
+
+
+def test_T0_dbz_reduces_to_exclude_contiguity():
+    g, A = _toy_europe()
+    K = int(A.max()) + 1
+    lab = graph_voronoi(g, K, np.random.default_rng(0))
+    lam_c = contiguity_guarantee(g, 0.5)
+    ref = initial_temperature(g, lab, K, 0.5, lam_c, 0.02, np.random.default_rng(1),
+                              exclude_contiguity=True)
+    t0 = DA.initial_temperature_dbz(g, lab, K, 0.5, 0.02, np.random.default_rng(1), A, K, 0.0)
+    assert t0 == ref
+    t10 = DA.initial_temperature_dbz(g, lab, K, 0.5, 0.02, np.random.default_rng(1), A, K, 10.0)
+    assert np.isfinite(t10) and t10 != ref

@@ -8,6 +8,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+from pathlib import Path
+
 from bzgen import config
 
 FIGS = config.ROOT / "figures" / "dbz"
@@ -153,3 +155,159 @@ def anchor_map(buses, lines, links, static_labels: pd.DataFrame, isolated: list,
              "lines (all cross-border)\n\nOn the European graph each ★ is\na one-bus fragment "
              "of its anchor\nzone: Σ(C_s − 1) = 8 for A.", fontsize=8.5, va="top")
     return _save(fig, name, dpi=140, bbox_inches="tight")
+
+
+# --------------------------------------------------------------------------- #
+# stage 2
+# --------------------------------------------------------------------------- #
+
+_CELLS: dict = {}
+
+
+def bus_cells(buses: pd.DataFrame):
+    """One Voronoi cell per bus over the whole of Europe, clipped to the (simplified)
+    union of the in-scope outlines; computed once per process (display only)."""
+    if "cells" in _CELLS:
+        return _CELLS["cells"]
+    import geopandas as gpd
+    from shapely.geometry import MultiPoint
+    from shapely.ops import unary_union, voronoi_diagram
+    from bzgen.plot import figures, maps
+    mem = figures.members_of(buses)
+    shape = unary_union([maps.country_shape(m) for m in mem.values()]).simplify(1500)
+    gb = maps._proj_buses(buses)
+    vor = voronoi_diagram(MultiPoint(list(gb.geometry)), envelope=shape.buffer(50_000).envelope)
+    cells = gpd.GeoDataFrame(geometry=list(vor.geoms), crs=maps.CRS)
+    j = gpd.sjoin(gpd.GeoDataFrame({"bus": gb.index}, geometry=gb.geometry.values, crs=maps.CRS),
+                  cells, predicate="within", how="left")
+    cells = cells.loc[j.index_right.to_numpy()].reset_index(drop=True)
+    cells["bus"] = j.bus.to_numpy()
+    cells["geometry"] = cells.geometry.intersection(shape)
+    _CELLS["cells"] = cells.set_index("bus")
+    _CELLS["shapes"] = gpd.GeoSeries([maps.country_shape(m) for m in mem.values()], crs=maps.CRS)
+    return _CELLS["cells"]
+
+
+def anchor_colours(g, A: np.ndarray, K: int) -> np.ndarray:
+    """Greedy colouring of the anchor-zone adjacency graph (colour index per A-zone)."""
+    import networkx as nx
+    src, dst = g.undirected()[:2]
+    Z = nx.Graph()
+    Z.add_nodes_from(range(K))
+    Z.add_edges_from({(int(a), int(b)) for a, b in zip(A[src], A[dst]) if a != b})
+    col = nx.greedy_color(Z, strategy="largest_first")
+    return np.array([col[z] for z in range(K)])
+
+
+def zone_map(W: dict, lab: pd.DataFrame, lam: float, row: dict, out_dir=None):
+    """B for one lambda_rigid: zones (each B-zone takes the colour of its matched
+    A-zone) and the nodes that changed zone relative to A."""
+    from scipy.optimize import linear_sum_assignment
+    from bzgen.dbz.anchor import contingency
+    from bzgen.plot import maps
+    g, A, K = W["g"], W["anchor"]["A"], W["K"]
+    buses = W["buses"]
+    cells = bus_cells(buses)
+    B = lab.zone.to_numpy()
+    colA = anchor_colours(g, A, K)
+    t = contingency(B, A, K, K)
+    r, c = linear_sum_assignment(t, maximize=True)
+    match = np.empty(K, np.int64)
+    match[r] = c
+    colB = colA[match]
+    changed = match[B] != A
+    pal = maps.PALETTE
+    fig, axes = plt.subplots(1, 2, figsize=(17, 9.5))
+    for ax, title in zip(axes, ("zones B", "nodes whose zone differs from A (after matching)")):
+        maps.outlines().plot(ax=ax, facecolor="0.95", edgecolor="0.6", lw=0.3, zorder=0)
+        ax.set_title(title, fontsize=10)
+    cb = cells.loc[lab.bus]
+    cb = cb.assign(zone=B)
+    d = cb.dissolve("zone").reset_index()
+    d.plot(ax=axes[0], color=[pal[colB[z] % len(pal)] for z in d.zone], alpha=0.7, lw=0.4,
+           edgecolor="white", zorder=1)
+    d.boundary.plot(ax=axes[0], color="0.25", lw=0.35, zorder=2)
+    ch = cb[changed]
+    cb[~changed].plot(ax=axes[1], color="0.82", lw=0, zorder=1)
+    if len(ch):
+        ch.plot(ax=axes[1], color="#d62728", lw=0, zorder=2)
+    dA = cells.loc[lab.bus].assign(zone=A).dissolve("zone").reset_index()
+    dA.boundary.plot(ax=axes[1], color="0.35", lw=0.3, zorder=3)
+    for ax in axes:
+        _CELLS["shapes"].plot(ax=ax, facecolor="none", edgecolor="k", lw=0.7, zorder=4)
+        frame = gpd_frame()
+        ax.set_xlim(frame[0], frame[2]); ax.set_ylim(frame[1], frame[3])
+        ax.set_aspect("equal"); ax.set_xticks([]); ax.set_yticks([])
+        ax.set_xlabel(""); ax.set_ylabel("")
+    axes[1].text(0.01, 0.01, "grey lines: anchor-zone boundaries; black: national borders",
+                 transform=axes[1].transAxes, fontsize=8)
+    fig.suptitle(f"DBZ λ_rigid = {lam:g}: transfer distance from A = "
+                 f"{row['transfer_distance']:.0f} of {g.n} nodes "
+                 f"({row['transfer_share']:.1%}); {row['n_zones_multinational']} multinational zones; "
+                 f"physical objective {row['physical']:.1f}, rigidity {row['rigid']:.2f}",
+                 fontsize=11)
+    fig.tight_layout()
+    name = f"zones_lr{lam:g}.png"
+    return _save_to(fig, name, None if out_dir is None else Path(out_dir) / "figures", dpi=120)
+
+
+def gpd_frame():
+    import geopandas as gpd
+    from bzgen.plot import maps
+    return gpd.GeoSeries([maps.box(-11, 35, 32, 71.5)], crs=4326).to_crs(maps.CRS).total_bounds
+
+
+def pareto(df: pd.DataFrame, restarts: dict, anchor_phys: float, N: int, fig_dir=None,
+           name="pareto.png"):
+    """Physical objective (Potts + lambda_b balance) vs transfer distance from A."""
+    fig, ax = plt.subplots(figsize=(8, 5.5))
+    for lam, r in restarts.items():
+        ax.scatter(r.transfer_distance, r.physical, s=14, color="0.7", zorder=1, lw=0)
+    ax.plot(df.transfer_distance, df.physical, "-", color="#4e79a7", lw=2, zorder=2)
+    ax.scatter(df.transfer_distance, df.physical, s=60, color="#4e79a7", zorder=3,
+               edgecolors="white", linewidths=1.5, label="best restart per λ_rigid")
+    for _, r in df.iterrows():
+        ax.annotate(f"λ={r.lambda_rigid:g}", (r.transfer_distance, r.physical),
+                    xytext=(6, 4), textcoords="offset points", fontsize=8, color="0.25")
+    ax.scatter([0], [anchor_phys], marker="*", s=180, color="#e15759", zorder=4,
+               edgecolors="k", linewidths=0.5, label="anchor A (static map)")
+    ax.scatter([], [], s=14, color="0.7", label="other restarts")
+    ax.set_xlabel(f"transfer distance from A (nodes that changed zone, of N = {N})")
+    ax.set_ylabel("physical objective  Σ w δ + λ_b Σ hinge  (lower is better)")
+    ax.set_title("What stability costs: DBZ Pareto front over λ_rigid", fontsize=11)
+    ax.grid(color="0.9", lw=0.6); ax.set_axisbelow(True)
+    ax.legend(fontsize=8, frameon=False)
+    fig.tight_layout()
+    return _save_to(fig, name, fig_dir)
+
+
+def acceptance(traces: dict, fig_dir=None, name="acceptance.png"):
+    """Single-flip acceptance rate per temperature step (best restart), per lambda."""
+    fig, ax = plt.subplots(figsize=(8, 4.8))
+    cols = ["#4e79a7", "#f28e2b", "#59a14f", "#e15759", "#76b7b2", "#edc948", "#b07aa1",
+            "#ff9da7"]
+    for n, (lam, tr) in enumerate(sorted(traces.items())):
+        a = np.clip(tr[:-1, 4], 1e-5, None)
+        ax.plot(np.arange(len(a)), a, lw=2, color=cols[n % len(cols)], label=f"λ_rigid={lam:g}")
+    ax.axhline(0.01, color="0.4", ls="--", lw=1)
+    ax.text(0.5, 0.0107, "1 %", fontsize=8, color="0.3")
+    ax.set_yscale("log")
+    ax.set_xlabel("temperature step (T0 → T0 · t_final_ratio)")
+    ax.set_ylabel("single-flip acceptance rate")
+    ax.set_title("Acceptance with λ_c pinned at the contiguity guarantee", fontsize=11)
+    ax.grid(color="0.9", lw=0.6); ax.set_axisbelow(True)
+    ax.legend(fontsize=8, frameon=False, ncol=2)
+    fig.tight_layout()
+    return _save_to(fig, name, fig_dir)
+
+
+def _save_to(fig, name, fig_dir, **kw):
+    global FIGS
+    if fig_dir is None:
+        return _save(fig, name, **kw)
+    old = FIGS
+    FIGS = Path(fig_dir)
+    try:
+        return _save(fig, name, **kw)
+    finally:
+        FIGS = old

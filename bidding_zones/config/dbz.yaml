@@ -16,6 +16,10 @@ edges:
   no_signal_policy: keep
 
 anneal:
+  # 10x the static sweeps per temperature: a full European restart costs ~10 s at
+  # the static 50 (the cheap lower bound rejects most proposals before the BFS),
+  # and 500 lowers the lambda_rigid = 0 energy by ~170 (reports/dbz_results.md).
+  sweeps_per_temp: 500
   # Balance floor as a fraction of the mean zone share: floor = frac / K.
   # 0.15 / 3 = 0.05 reproduces the static absolute floor at k = 3.
   balance_floor_frac_of_mean: 0.15
@@ -29,7 +33,7 @@ dbz:
   # static optimum of the same physical terms B is optimised against).
   lambda_rigid: [0.0, 0.1, 0.3, 1.0, 3.0, 10.0]
   # T0 sanity band (fail loudly outside it).
-  T0_band: [1.0e-3, 1.0e3]
+  T0_band: [0.001, 1000.0]
   # Restarts run in parallel over this many worker processes.
   workers: 4
   smoke:

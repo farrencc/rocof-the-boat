@@ -581,8 +581,16 @@ def graph_voronoi(g: CountryGraph, k: int, rng: np.random.Generator) -> np.ndarr
 
 
 def initial_temperature(g: CountryGraph, labels, k, lam_b, lam_c, floor, rng, n_samples=400,
-                        target_accept=0.6):
-    """T0 such that a typical uphill move is accepted with ~target probability."""
+                        target_accept=0.6, exclude_contiguity: bool = False):
+    """T0 such that a typical uphill move is accepted with ~target probability.
+
+    ``exclude_contiguity=True`` evaluates the sampled dE with lambda_c = 0, i.e. on
+    the physical terms only.  Needed when lambda_c is pinned at the contiguity
+    guarantee (a huge number on a large graph), which would otherwise dominate the
+    median and blow T0 up.  Default False: the static pipeline is unchanged.
+    """
+    if exclude_contiguity:
+        lam_c = 0.0
     ws = g.ws
     zL = np.zeros(k)
     zG = np.zeros(k)
