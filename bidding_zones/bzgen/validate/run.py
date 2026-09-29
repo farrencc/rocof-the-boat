@@ -356,6 +356,8 @@ def main():
     ap.add_argument("--workers", type=int)
     ap.add_argument("--check", action="store_true")
     ap.add_argument("--report-only", action="store_true")
+    ap.add_argument("--sweep-maps", nargs="*", default=[],
+                    help="extra in-sample maps from results/configs/<cid>/labels.csv (exploratory scan)")
     ap.add_argument("--scoring", nargs="*", choices=["oos_even", "insample"],
                     help="only these scoring sets (default: validate.scoring)")
     args = ap.parse_args()
@@ -381,8 +383,11 @@ def main():
     real.to_csv(RES / "real_zones.csv")
     real_rep.to_csv(RES / "real_zones_report.csv")
     maps = load_maps(cfg, log)
+    for cid in args.sweep_maps:
+        maps[f"sw_{cid}"] = {"fit": "insample", "role": "scan", "config": cid,
+                             "labels": zonemap.sweep_labels(cid, v["focus"])}
     if args.maps:
-        maps = {k: m for k, m in maps.items() if k in args.maps}
+        maps = {k: m for k, m in maps.items() if k in args.maps or k.startswith("sw_")}
     share = pd.read_csv(out / "nodal" / "shed_share.csv", index_col=0).shed_hour_share
     pocket = set(M.pockets(share, cfg))
     focus_bus = buses.cluster_country == v["focus"]
