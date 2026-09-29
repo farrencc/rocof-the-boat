@@ -269,6 +269,19 @@ def pareto(df: pd.DataFrame, restarts: dict, anchor_phys: float, N: int, fig_dir
     for _, r in df.iterrows():
         ax.annotate(f"λ={r.lambda_rigid:g}", (r.transfer_distance, r.physical),
                     xytext=(6, 4), textcoords="offset points", fontsize=8, color="0.25")
+    if "ref_physical" in df:
+        ax.plot(df.ref_transfer, df.ref_physical, ":", color="#59a14f", lw=1.5, zorder=2)
+        ax.scatter(df.ref_transfer, df.ref_physical, marker="D", s=40, facecolors="white",
+                   edgecolors="#59a14f", linewidths=1.5, zorder=3,
+                   label="reference: T = 0 quench from A′ (diagnostic, not the sweep)")
+        for _, r in df.iterrows():
+            ax.annotate(f"{r.lambda_rigid:g}", (r.ref_transfer, r.ref_physical), xytext=(-4, -12),
+                        textcoords="offset points", fontsize=7, color="#3b7a33")
+        if df.ref_dominates_best.any():
+            ax.text(0.98, 0.70, "the reference dominates the sweep's best at λ_rigid ≥ "
+                    f"{df[df.ref_dominates_best].lambda_rigid.min():g}:\nthere the blue points "
+                    "are what the search finds, not the frontier",
+                    transform=ax.transAxes, ha="right", va="top", fontsize=8, color="0.25")
     ax.scatter([0], [anchor_phys], marker="*", s=180, color="#e15759", zorder=4,
                edgecolors="k", linewidths=0.5, label="anchor A (static map)")
     ax.scatter([], [], s=14, color="0.7", label="other restarts")
