@@ -16,7 +16,7 @@ def load(path: str | Path | None = None) -> dict:
 
 
 def _check(cfg: dict) -> dict:
-    for c in cfg["scope"]["countries"]:
+    for c in cfg["scope"]["countries"] + cfg.get("validate", {}).get("split_real", []):
         if not isinstance(c, str):
             raise ValueError(f"country code parsed as {c!r}: quote it in the YAML")
     return cfg
