@@ -45,7 +45,12 @@ class DCOPF:
         k0 = bi[K.bus0].to_numpy()
         k1 = bi[K.bus1].to_numpy()
         v = n.buses.v_nom[L.bus0].to_numpy()
-        self.bl = 1.0 / (L.x.to_numpy() / v ** 2)
+        # Susceptance in PyPSA per-unit (1 MVA base).  The angle columns are
+        # scaled by S = median(b): phi = S theta, so the matrix holds b/S
+        # (~1e-3..1e2) instead of b (~1e2..3e6), which HiGHS otherwise fails on.
+        b_pu = 1.0 / (L.x.to_numpy() / v ** 2)
+        self.S = float(np.median(b_pu))
+        self.bl = b_pu / self.S
         self.l0, self.l1 = l0, l1
         self.Fmax = (L.s_nom * s_max_pu).to_numpy()
         # columns: [p_g (G) | theta (N) | f_k (NK)]
@@ -114,13 +119,27 @@ class DCOPF:
         h.changeRowsBounds(self.N, self.bidx, load.astype(float), load.astype(float))
         h.run()
         st = h.getModelStatus()
+        retry = ""
         if st != self.highspy.HighsModelStatus.kOptimal:
-            return {"status": h.modelStatusToString(st)}
+            # 1) cold restart (drop the warm basis); 2) interior point + crossover
+            h.clearSolver()
+            h.run()
+            st = h.getModelStatus()
+            retry = "cold"
+            if st != self.highspy.HighsModelStatus.kOptimal:
+                h.setOptionValue("solver", "ipm")
+                h.clearSolver()
+                h.run()
+                st = h.getModelStatus()
+                h.setOptionValue("solver", "choose")
+                retry = "ipm"
+        if st != self.highspy.HighsModelStatus.kOptimal:
+            return {"status": h.modelStatusToString(st), "retry": retry}
         sol = h.getSolution()
         x = np.asarray(sol.col_value)
         y = np.asarray(sol.row_dual)
         th = x[self.G:self.G + self.N]
-        return {"status": "ok", "price": y[:self.N].copy(), "p": x[:self.G].copy(),
+        return {"status": "ok", "retry": retry, "price": y[:self.N].copy(), "p": x[:self.G].copy(),
                 "line_p": self.bl * (th[self.l0] - th[self.l1]),
                 "link_p": x[self.G + self.N:].copy(),
                 "objective": h.getInfo().objective_function_value}

@@ -45,7 +45,9 @@ def _worker_init(cfg, seed):
     warnings.filterwarnings("ignore")
     n = opf.build_network(cfg)
     rng = np.random.default_rng(seed)
-    costs = n.generators.mc_base.to_numpy() + rng.uniform(0, cfg["solve"]["cost_noise"], len(n.generators))
+    # noise in [noise/10, noise) keeps every cost clear of HiGHS's "tiny cost" range
+    cn = cfg["solve"]["cost_noise"]
+    costs = n.generators.mc_base.to_numpy() + rng.uniform(cn / 10, cn, len(n.generators))
     m = DCOPF(n, cfg["network"]["s_max_pu"], costs=costs)
     pmpu = n.get_switchable_as_dense("Generator", "p_max_pu")
     L = n.loads_t.p_set
@@ -56,13 +58,15 @@ def _worker_init(cfg, seed):
 
 def _worker_solve(snaps):
     n, m = _W["n"], _W["m"]
-    out = {"snaps": snaps, "price": [], "p": [], "line": [], "link": [], "status": [], "sec": []}
+    out = {"snaps": snaps, "price": [], "p": [], "line": [], "link": [], "status": [], "sec": [],
+           "retry": []}
     for s in snaps:
         t = time.time()
         load = np.zeros(_W["nb"])
         np.add.at(load, _W["load_bus"], _W["L"].loc[s].to_numpy())
         r = m.solve(_W["pmpu"].loc[s].to_numpy() * _W["p_nom"], load)
         out["status"].append(r["status"])
+        out["retry"].append(r.get("retry", ""))
         out["sec"].append(time.time() - t)
         if r["status"] != "ok":
             for k in ("price", "p", "line", "link"):
@@ -109,10 +113,12 @@ def main():
     log(f"{len(sn)} snapshots, total weight {sn.weight.sum():.0f} h")
     n = opf.build_network(cfg)
     res = run_pool(list(sn.index), cfg, cfg["anneal"]["seed"], cfg["solve"]["workers"], log)
-    snaps, price, p, line, link, status, sec = [], [], [], [], [], [], []
+    snaps, price, p, line, link, status, sec, retries = [], [], [], [], [], [], [], []
     for r in res:
         for j, s in enumerate(r["snaps"]):
             status.append((s, r["status"][j]))
+            if r["retry"][j]:
+                retries.append((str(s), r["retry"][j], r["status"][j]))
             sec.append(r["sec"][j])
             if r["status"][j] != "ok":
                 continue
@@ -148,7 +154,8 @@ def main():
     pd.DataFrame({"mean_loading": (w[:, None] * kl).sum(0) / w.sum(),
                   "share_at_limit": (w[:, None] * (kl > 0.999)).sum(0) / w.sum()},
                  index=n.links.index).to_csv(SOLVED / "link_stats.csv")
-    meta = {"n_snapshots": len(idx), "not_optimal": len(bad), "solve_seconds_total": float(np.sum(sec)),
+    meta = {"n_snapshots": len(idx), "not_optimal": len(bad),
+            "not_optimal_snapshots": [str(b) for b in bad], "retries": retries, "solve_seconds_total": float(np.sum(sec)),
             "solve_seconds_median": float(np.median(sec)), "cost_noise": cfg["solve"]["cost_noise"]}
     # degeneracy subsample: second noise seed
     k = min(cfg["solve"]["degeneracy_sample"], len(idx))

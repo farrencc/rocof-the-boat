@@ -63,6 +63,14 @@
   "sha256": "554336d416056abcd1d6f3239e3d5893560ca180056971557403c6fd8ff66d2c",
   "url": "https://gisco-services.ec.europa.eu/distribution/v2/nuts/geojson/NUTS_RG_01M_2021_4326_LEVL_3.geojson"
  },
+ "gisco_nuts2024_l0_10m": {
+  "accessed": "2026-09-29",
+  "bytes": 565367,
+  "file": "data/cache/gisco/NUTS_RG_10M_2024_4326_LEVL_0.geojson",
+  "notes": "GISCO NUTS 2024 level 0, 1:10M, EPSG:4326 (maps only)",
+  "sha256": "d320443cd7fa611695f1ec7cc9061a3c3acda630eb7c1904a52e3027a69f397d",
+  "url": "https://gisco-services.ec.europa.eu/distribution/v2/nuts/geojson/NUTS_RG_10M_2024_4326_LEVL_0.geojson"
+ },
  "gisco_nuts2024_l3": {
   "accessed": "2026-09-29",
   "bytes": 27590155,

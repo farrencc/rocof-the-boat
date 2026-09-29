@@ -205,3 +205,35 @@ short status message in chat. Existing `IzzyMatt/` content is not touched.
 
 ## Changelog
 - 2026-09-29 — initial plan.
+- 2026-09-29 — amendments while building (each is also documented where it applies):
+  - **Weather**: 303→323 points (hex grid 150 km, not 1°) to stay inside Open-Meteo's
+    free quota (≈27 weighted calls per point-year). The egress IP pool is shared: many
+    requests get "daily limit exceeded" 429s from one IP and succeed on another, so the
+    fetcher retries after 30 s instead of sleeping an hour. YAML parsed `NO` as `false`
+    (Norway silently dropped) — caught, codes quoted, a config check added.
+  - **Load key**: PyPSA-Eur's weights are GDP 0.6 / population 0.4 (my first draft had
+    them swapped). Population from `demo_r_pjanaggr3` (covers CH/NO/AL), NUTS 2024.
+  - **Hydro**: capping reservoirs at their annual-average CF made winter peaks infeasible
+    (NO short by 6.5 GW). Reservoirs are now dispatchable to 90 % at the water value, with
+    no energy limit (no storage); annual output reported against Eurostat.
+  - **Solver**: one `n.optimize()` call took ~150 s outside HiGHS for 4 hours. The hourly
+    LP is now assembled once from the PyPSA network and solved with highspy, warm-started,
+    ~0.1 s/hour; prices and objective checked identical to `n.optimize()`. Consequence:
+    **all 8760 hours are solved (weight 1)**; the k-means subset code stays available.
+    Angle variables are rescaled (b/median b) — HiGHS failed on the raw [1, 3e6] range;
+    failures fall back to cold restart then IPM, and every retry is logged.
+  - **Load shedding** occurs in ~97 % of hours at a handful of chronic "load pockets"
+    (single 220 kV buses inside dense NUTS3 regions: Munich, Paris, Oslo, Stockholm, Cádiz,
+    Nice, Dublin) — a 220 kV-truncation + allocation artefact. Voronoi-overlap allocation
+    was tested and moved rather than removed them. Snapshot exclusion is therefore
+    infeasible; **policy = clip prices at ±500 EUR/MWh** (reports/solve.md).
+  - **Annealer**: single flips froze with locked-in fragments; added **fragment (cluster)
+    moves** and an automatic λ_c,final above any possible Potts+balance change, so final
+    states are contiguous by construction. λ_c,initial is what the sweep varies.
+    Validated on planted partitions (reports/annealer_validation.md).
+  - **Eigengap**: the plain largest gap is biased to k_max on near-planar graphs; the
+    elbow now uses gap / median(neighbouring gaps), and k ≤ max(2, n/4).
+  - **Energy sign structure** (dev finding, to be confirmed on real data): with J̃
+    strongly skewed, most edges have w = Δp̃ − αJ̃ > 0 at α = 1, so the Potts model is
+    antiferromagnetic on most edges and minimisers are contiguous but interdigitated. The
+    α range is extended to {…, 5, 10}; share of w>0 edges and cut ratio are recorded.

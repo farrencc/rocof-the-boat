@@ -56,17 +56,23 @@ solve:
   cost_noise: 0.01        # EUR/MWh seeded random perturbation to break ties
   degeneracy_sample: 500  # snapshots re-solved with a second noise seed
   degeneracy_tol: 0.5     # EUR/MWh
-  shedding_policy: exclude  # exclude | clip
+  shedding_policy: clip     # exclude | clip  (exclude infeasible: shedding in ~97% of hours, see reports/solve.md)
+  shed_tol_mw: 1.0
+  price_clip: 500.0       # EUR/MWh, used by the "clip" policy
 
 edges:
   statistic: duration     # duration | mean | quantile
   duration_threshold: 1.0 # EUR/MWh
   quantile: 0.9
   dc_in_energy: true      # HVDC edges enter H with their dp and J = 0
+  dp_remedy: none         # none | clip | log1p | rank  (decided at the normalisation gate)
+  dp_clip_q: 0.99
+  J_remedy: none
+  J_clip_q: 0.99
 
 spectrum:
   k_max: 12
-  gap_ratio: 1.5
+  gap_ratio: 3.0         # a gap must be >= 3x the median of its neighbouring gaps
   k_fallback: 3
 
 anneal:
@@ -75,9 +81,9 @@ anneal:
   lambda_c_final: auto    # auto = above any Potts+balance change -> contiguous final state
   lambda_b: 0.5
   balance_floor: 0.05
-  restarts: 8
-  sweeps_per_temp: 20     # proposals per temperature, in units of the number of nodes
-  n_temps: 60
+  restarts: 12
+  sweeps_per_temp: 50     # proposals per temperature, in units of the number of nodes
+  n_temps: 80
   t_final_ratio: 0.01
   quench_sweeps: 20
   seed: 12345
@@ -107,3 +113,13 @@ costs:
     solar:     {mc: 0.0}
   hydro_cf_default: 0.45
   hydro_cf_clip: [0.10, 0.80]
+
+sweep:
+  baseline: {alpha: 1.0, lambda_c_initial: 0.1, lambda_b: 0.5, dk: 0}
+  vary:
+    alpha: [0.25, 0.5, 0.75, 1.5, 2.0, 3.0, 5.0, 10.0]
+    lambda_c_initial: [0.02, 0.5]
+    lambda_b: [0.0, 0.1, 2.0]
+    dk: [-1, 1, 2]
+  degeneracy_rel_tol: 0.001   # restarts within this relative energy of the best are "near-degenerate"
+  degenerate_ari: 0.9         # ... and flagged degenerate if their map differs (ARI below this)

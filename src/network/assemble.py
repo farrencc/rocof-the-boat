@@ -59,7 +59,66 @@ def nearest_bus(buses: pd.DataFrame, lon, lat, country) -> np.ndarray:
     return out
 
 
+def voronoi_key(buses: pd.DataFrame, cfg: dict) -> tuple[pd.Series, pd.DataFrame]:
+    """PyPSA-Eur's method (``redistribute_attribute``): each NUTS3 region's
+    population and GDP are split over the buses' Voronoi cells (per country,
+    clipped to the country) in proportion to overlapping area."""
+    from shapely.geometry import MultiPoint
+    from shapely.ops import voronoi_diagram
+    nuts = regional.nuts3_table()
+    nuts["cc"] = nuts.CNTR_CODE.replace({"EL": "GR"})
+    nuts = nuts.to_crs(3035)
+    wg, wp = cfg["demand"]["w_gdp"], cfg["demand"]["w_pop"]
+    key = pd.Series(0.0, index=buses.index)
+    rows = []
+    for c, bb in buses.groupby("country"):
+        nc = nuts[nuts.cc == c]
+        row = {"country": c, "buses": len(bb), "nuts3_regions": len(nc)}
+        have_pop = len(nc) and nc["pop"].notna().all()
+        have_gdp = len(nc) and nc["gdp"].notna().all()
+        if not len(nc) or not (have_pop or have_gdp):
+            key[bb.index] = 1.0 / len(bb)
+            row["method"] = "FLAG uniform per bus (no NUTS3 values)"
+            rows.append(row)
+            continue
+        shape = nc.geometry.union_all()
+        pts = gpd.GeoSeries(gpd.points_from_xy(bb.x, bb.y), crs=4326).to_crs(3035)
+        if len(bb) == 1:
+            cells = gpd.GeoDataFrame({"bus": bb.index}, geometry=[shape], crs=3035)
+        else:
+            from shapely.geometry import box
+            x0, y0, x1, y1 = shape.bounds
+            # (buffering the coastline itself is prohibitively expensive, e.g. FI)
+            vor = voronoi_diagram(MultiPoint(list(pts)), envelope=box(x0 - 1e5, y0 - 1e5, x1 + 1e5, y1 + 1e5))
+            cells = gpd.GeoDataFrame(geometry=list(vor.geoms), crs=3035)
+            j = gpd.sjoin(gpd.GeoDataFrame({"bus": bb.index}, geometry=pts.values, crs=3035),
+                          cells, predicate="within")
+            cells = cells.loc[j.index_right.values].assign(bus=j.bus.values)
+            cells["geometry"] = cells.geometry.intersection(shape)
+        ov = gpd.overlay(nc[["geo", "pop", "gdp", "geometry"]], cells[["bus", "geometry"]],
+                         how="intersection", keep_geom_type=True)
+        ov["a"] = ov.area
+        ov["share"] = ov.a / ov.groupby("geo").a.transform("sum")
+        pop = (ov["pop"] * ov.share).groupby(ov.bus).sum().reindex(bb.index).fillna(0.0)
+        gdp = (ov["gdp"] * ov.share).groupby(ov.bus).sum().reindex(bb.index).fillna(0.0)
+        if have_pop and have_gdp:
+            k = wg * gdp / gdp.sum() + wp * pop / pop.sum()
+            row["method"] = f"voronoi {wg} gdp + {wp} pop"
+        elif have_pop:
+            k = pop / pop.sum()
+            row["method"] = "voronoi FLAG population only (GDP incomplete)"
+        else:
+            k = gdp / gdp.sum()
+            row["method"] = "voronoi FLAG GDP only (population incomplete)"
+        key[bb.index] = k / k.sum()
+        row["buses_zero_load"] = int((k == 0).sum())
+        rows.append(row)
+    return key, pd.DataFrame(rows).set_index("country")
+
+
 def load_key(buses: pd.DataFrame, cfg: dict) -> tuple[pd.Series, pd.DataFrame]:
+    if cfg["demand"].get("distribution", "point_in_polygon") == "voronoi":
+        return voronoi_key(buses, cfg)
     nuts = regional.nuts3_table()
     nuts["cc"] = nuts.CNTR_CODE.replace({"EL": "GR"})
     pts = gpd.GeoDataFrame(buses[["country"]].copy(),
