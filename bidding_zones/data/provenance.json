@@ -1,0 +1,154 @@
+{
+ "eurostat_demo_r_pjanaggr3": {
+  "accessed": "2026-09-29",
+  "bytes": 2019779,
+  "file": "data/cache/eurostat/demo_r_pjanaggr3.tsv.gz",
+  "notes": "Eurostat population on 1 January by broad age group, sex and NUTS 3, SDMX TSV",
+  "sha256": "eacde2505c811c0af170dee1afb194840d79abff5e59137108cd8d0b752c757e",
+  "url": "https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data/demo_r_pjanaggr3?format=TSV&compressed=true"
+ },
+ "eurostat_nama_10r_3gdp": {
+  "accessed": "2026-09-29",
+  "bytes": 743572,
+  "file": "data/cache/eurostat/nama_10r_3gdp.tsv.gz",
+  "notes": "Eurostat nama_10r_3gdp, SDMX TSV (full dataset)",
+  "sha256": "3cccb6e2f2f6695812520c7b2192c5fa5fed20264f393d79644be51af2a300cb",
+  "url": "https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data/nama_10r_3gdp?format=TSV&compressed=true"
+ },
+ "eurostat_nama_10r_3popgdp": {
+  "accessed": "2026-09-29",
+  "bytes": 123058,
+  "file": "data/cache/eurostat/nama_10r_3popgdp.tsv.gz",
+  "notes": "Eurostat nama_10r_3popgdp, SDMX TSV (full dataset)",
+  "sha256": "a56a5993001e105700547ab5d114c23fa339de54eb4e7d0968d5333763bfae23",
+  "url": "https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data/nama_10r_3popgdp?format=TSV&compressed=true"
+ },
+ "eurostat_nrg_bal_peh": {
+  "accessed": "2026-09-29",
+  "bytes": 2115156,
+  "file": "data/cache/eurostat/nrg_bal_peh.tsv.gz",
+  "notes": "Eurostat gross and net production of electricity and derived heat by type of plant and operator, GWh",
+  "sha256": "0cb72a9d18303b0361dac7b1cf8f71e4fd2ce37de31f92ca3d3ace4c97183227",
+  "url": "https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data/nrg_bal_peh?format=TSV&compressed=true"
+ },
+ "eurostat_nrg_cb_e": {
+  "accessed": "2026-09-29",
+  "bytes": 184396,
+  "file": "data/cache/eurostat/nrg_cb_e.tsv.gz",
+  "notes": "Eurostat nrg_cb_e, SDMX TSV (full dataset)",
+  "sha256": "e1248d9b3d9b16442a1dfa742bbb8a3274f76233e9dbbfbf292504f93b185835",
+  "url": "https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data/nrg_cb_e?format=TSV&compressed=true"
+ },
+ "eurostat_nrg_inf_epcrw": {
+  "accessed": "2026-09-29",
+  "bytes": 53081,
+  "file": "data/cache/eurostat/nrg_inf_epcrw.tsv.gz",
+  "notes": "Eurostat nrg_inf_epcrw, SDMX TSV (full dataset)",
+  "sha256": "57d23c951541295438bf9cac02ac81ea245757a843a067f855bff529e74e4342",
+  "url": "https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data/nrg_inf_epcrw?format=TSV&compressed=true"
+ },
+ "gisco_countries_2024": {
+  "accessed": "2026-09-29",
+  "bytes": 3846978,
+  "file": "data/cache/gisco/CNTR_RG_10M_2024_4326.geojson",
+  "notes": "GISCO countries 2024, 1:10M, EPSG:4326",
+  "sha256": "be561885519d4bd4b4180dfd3c18540f581b702b3a9c8d51fb59e62843916ec6",
+  "url": "https://gisco-services.ec.europa.eu/distribution/v2/countries/geojson/CNTR_RG_10M_2024_4326.geojson"
+ },
+ "gisco_nuts2021_l3": {
+  "accessed": "2026-09-29",
+  "bytes": 28176705,
+  "file": "data/cache/gisco/NUTS_RG_01M_2021_4326_LEVL_3.geojson",
+  "notes": "GISCO NUTS 2021 level 3, 1:1M, EPSG:4326",
+  "sha256": "554336d416056abcd1d6f3239e3d5893560ca180056971557403c6fd8ff66d2c",
+  "url": "https://gisco-services.ec.europa.eu/distribution/v2/nuts/geojson/NUTS_RG_01M_2021_4326_LEVL_3.geojson"
+ },
+ "gisco_nuts2024_l0_10m": {
+  "accessed": "2026-09-29",
+  "bytes": 565367,
+  "file": "data/cache/gisco/NUTS_RG_10M_2024_4326_LEVL_0.geojson",
+  "notes": "GISCO NUTS 2024 level 0, 1:10M, EPSG:4326 (maps only)",
+  "sha256": "d320443cd7fa611695f1ec7cc9061a3c3acda630eb7c1904a52e3027a69f397d",
+  "url": "https://gisco-services.ec.europa.eu/distribution/v2/nuts/geojson/NUTS_RG_10M_2024_4326_LEVL_0.geojson"
+ },
+ "gisco_nuts2024_l3": {
+  "accessed": "2026-09-29",
+  "bytes": 27590155,
+  "file": "data/cache/gisco/NUTS_RG_01M_2024_4326_LEVL_3.geojson",
+  "notes": "GISCO NUTS 2024 level 3, 1:1M, EPSG:4326",
+  "sha256": "2f298a6546e022126b1d7666fc0d5ac549aa0239f3fdb2521051d203dcba1a1c",
+  "url": "https://gisco-services.ec.europa.eu/distribution/v2/nuts/geojson/NUTS_RG_01M_2024_4326_LEVL_3.geojson"
+ },
+ "open_meteo_era5_2019": {
+  "accessed": "2026-09-29",
+  "bytes": null,
+  "file": "",
+  "notes": "323/323 points, models=era5, hourly wind_speed_100m,shortwave_radiation, 2019; sha256 over concatenated per-point JSON (sorted lat,lon); points in data/weather_points.csv",
+  "sha256": "9140e00fb45544d5fea274dc3f66d09a916cccd247aadcf34fe5cb479d2bed5c",
+  "url": "https://archive-api.open-meteo.com/v1/archive"
+ },
+ "opsd_time_series_60min": {
+  "accessed": "2026-09-29",
+  "bytes": 130339665,
+  "file": "data/cache/opsd/time_series_60min_singleindex.csv",
+  "notes": "OPSD Time series package, latest release, 60-min single-index CSV",
+  "sha256": "6a7f2bc571314cbf9c321cc03437691cd4be95c3a6f075e60ff99e8035c704c8",
+  "url": "https://data.open-power-system-data.org/time_series/latest/time_series_60min_singleindex.csv"
+ },
+ "osm_buses.csv": {
+  "accessed": "2026-09-29",
+  "bytes": 805469,
+  "file": "data/cache/osm/buses.csv",
+  "notes": "PyPSA-Eur OSM network v0.7, Zenodo 18619025; md5 031c30f04dc24e99210b3f5ad8a01c94 verified",
+  "sha256": "f50c75ea0339f5578ae383b47a1c0564b371c5d0d60fd4181ed626c7f3a5a523",
+  "url": "https://zenodo.org/api/records/18619025/files/buses.csv/content"
+ },
+ "osm_converters.csv": {
+  "accessed": "2026-09-29",
+  "bytes": 9288,
+  "file": "data/cache/osm/converters.csv",
+  "notes": "PyPSA-Eur OSM network v0.7, Zenodo 18619025; md5 fe13a4f336fdc273c808cdfc485b4753 verified",
+  "sha256": "7564f11e58604a013b3fae28fa71637f84ff7e0c3555be71fc8c5523790cdc17",
+  "url": "https://zenodo.org/api/records/18619025/files/converters.csv/content"
+ },
+ "osm_lines.csv": {
+  "accessed": "2026-09-29",
+  "bytes": 19806938,
+  "file": "data/cache/osm/lines.csv",
+  "notes": "PyPSA-Eur OSM network v0.7, Zenodo 18619025; md5 04d1e7cb33835de9c7d8be4716c6a8bf verified",
+  "sha256": "d3ee4f45a0d9889eee9e27376cb9cfc877514964f77ba406bea3b6eb336531cb",
+  "url": "https://zenodo.org/api/records/18619025/files/lines.csv/content"
+ },
+ "osm_links.csv": {
+  "accessed": "2026-09-29",
+  "bytes": 322916,
+  "file": "data/cache/osm/links.csv",
+  "notes": "PyPSA-Eur OSM network v0.7, Zenodo 18619025; md5 2ddd515a30cfc19205e6681def579fbd verified",
+  "sha256": "2c7b4769fecc68bb1887f5ea3b3c259a61145fb0a3ac50dec0d3b2ed10b16832",
+  "url": "https://zenodo.org/api/records/18619025/files/links.csv/content"
+ },
+ "osm_record_18619025": {
+  "accessed": "2026-09-29",
+  "bytes": null,
+  "file": "",
+  "notes": "Zenodo metadata: 'Prebuilt Electricity Network for PyPSA-Eur based on OpenStreetMap Data' v0.7, published 2026-02-12",
+  "sha256": null,
+  "url": "https://zenodo.org/api/records/18619025"
+ },
+ "osm_transformers.csv": {
+  "accessed": "2026-09-29",
+  "bytes": 121972,
+  "file": "data/cache/osm/transformers.csv",
+  "notes": "PyPSA-Eur OSM network v0.7, Zenodo 18619025; md5 b6730b52097d2691d49231bdd53c7bd4 verified",
+  "sha256": "65ac747f623da832c5d6c1046e106f4b3bba0cc72c443dfbb567a83d4da4a7c0",
+  "url": "https://zenodo.org/api/records/18619025/files/transformers.csv/content"
+ },
+ "powerplantmatching": {
+  "accessed": "2026-09-29",
+  "bytes": 20984705,
+  "file": "data/cache/ppm/powerplants.csv",
+  "notes": "powerplantmatching 0.8.0 prepared (matched) dataset, tag v0.8.0",
+  "sha256": "eb4fceb8285322ddb34c9f76ddf1bc0311a297628756185d99187fd84db5c2c6",
+  "url": "https://raw.githubusercontent.com/PyPSA/powerplantmatching/v0.8.0/powerplants.csv"
+ }
+}
