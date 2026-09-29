@@ -69,12 +69,13 @@ def _evaluate_kernel(member, weights, state_base, pre_dispatch, nss, limits, max
     secure = np.ones(n_snap, dtype=np.bool_)
     worst_loading = np.zeros(n_snap)
     actions = np.zeros(n_snap, dtype=np.int64)
-    # binding[s, j, 0/1]: number of relief iterations in snapshot s whose top-of-
-    # iteration worst state was j with positive (0) or negative (1) flow, loading > 1.
-    binding = np.zeros((n_snap, n_state, 2))
+    # binding[j, 0/1]: case-weighted count of relief iterations whose top-of-iteration
+    # worst state was j with positive (0) / negative (1) flow and loading > 1. This
+    # includes the final iteration in which no group could relieve j (loop breaks).
+    binding = np.zeros((n_state, 2))
+    # relief[j, g]: case-weighted MW curtailed by group g while j was the worst state.
+    relief = np.zeros((n_state, n_group))
     curtail = np.zeros((n_snap, n_node))
-    final_flow = np.zeros((n_snap, n_state))
-    group_actions = np.zeros((n_snap, n_group))
 
     # Precompute member index lists (CSR style) so iteration order is node order.
     counts = np.zeros(n_group, dtype=np.int64)
@@ -110,9 +111,9 @@ def _evaluate_kernel(member, weights, state_base, pre_dispatch, nss, limits, max
             if worst_ratio <= 1.0 + 1e-8:
                 break
             if flow[worst] >= 0:
-                binding[s, worst, 0] += 1.0
+                binding[worst, 0] += weights[s]
             else:
-                binding[s, worst, 1] += 1.0
+                binding[worst, 1] += weights[s]
 
             best_g = -1
             best_req = 0.0
@@ -164,7 +165,7 @@ def _evaluate_kernel(member, weights, state_base, pre_dispatch, nss, limits, max
                 curtail[s, i] += dispatch[i] - new
                 dispatch[i] = new
             network_dd[s] += delta
-            group_actions[s, best_g] += delta
+            relief[worst, best_g] += weights[s] * delta
             used += 1
 
         wl = 0.0
@@ -175,8 +176,7 @@ def _evaluate_kernel(member, weights, state_base, pre_dispatch, nss, limits, max
         worst_loading[s] = wl
         secure[s] = wl <= 1.0 + 1e-6
         actions[s] = used
-        final_flow[s] = flow
-    return network_dd, secure, worst_loading, actions, binding, curtail, final_flow, group_actions
+    return network_dd, secure, worst_loading, actions, binding, relief, curtail
 
 
 @dataclass
@@ -186,10 +186,9 @@ class EvalResult:
     worst_loading: np.ndarray     # snapshot -> max screened loading after relief
     network_dd_mw: np.ndarray     # snapshot -> network (constraint) curtailment MW
     actions: np.ndarray           # snapshot -> number of group actions used
-    binding: np.ndarray           # snapshot x state x {pos, neg}: binding-iteration counts
+    binding: np.ndarray           # state x {pos, neg}: case-weighted binding-iteration counts
+    relief_mw: np.ndarray         # state x group: case-weighted MW curtailed while state was worst
     curtail_mw: np.ndarray        # snapshot x node network curtailment MW
-    final_state_flow: np.ndarray  # snapshot x state post-relief screened flows
-    group_mw: np.ndarray          # snapshot x group MW curtailed by each group
 
 
 class Evaluator:
@@ -213,12 +212,12 @@ class Evaluator:
         if M.ndim != 2 or M.shape[0] != self.n_node:
             raise ValueError(f"membership must be {self.n_node} x K, got {M.shape}")
         self.calls += 1
-        net_dd, secure, worst, actions, binding, curtail, final_flow, group_mw = _evaluate_kernel(
+        net_dd, secure, worst, actions, binding, relief, curtail = _evaluate_kernel(
             M, self.weights, self._state_base, self._pre_dispatch, self._nss, self._limits,
             self.max_group_actions)
         total_dd = self.pre_dd_weighted + float(np.sum(self.weights * net_dd))
         pct = 100.0 * total_dd / max(self.potential_weighted, EPS)
-        return EvalResult(float(pct), secure, worst, net_dd, actions, binding, curtail, final_flow, group_mw)
+        return EvalResult(float(pct), secure, worst, net_dd, actions, binding, relief, curtail)
 
     def new_failures(self, result: EvalResult, baseline_secure: np.ndarray) -> int:
         """Snapshots secure at baseline but insecure now (upstream security_guard)."""
@@ -245,3 +244,62 @@ def wdt_membership(template) -> tuple[np.ndarray, np.ndarray]:
         for g in t:
             M[i, col[g]] = True
     return M, uniq
+
+
+@dataclass
+class Member:
+    """One frozen case of an ensemble, with its baseline-security reference."""
+    seed: int
+    thermal_scale: float
+    cases: object
+    evaluator: Evaluator
+    baseline_secure: np.ndarray | None = None
+    baseline_pct: float | None = None
+
+
+class EnsembleEvaluator:
+    """Evaluate one membership over several frozen cases.
+
+    D(G) is the unweighted mean of the members' dispatch-down %; the upstream
+    security guard is applied per member against that member's baseline
+    (a new insecure snapshot in ANY member makes the candidate infeasible).
+    """
+
+    def __init__(self, members: list[Member]):
+        self.members = members
+
+    @property
+    def calls(self) -> int:
+        return self.members[0].evaluator.calls if self.members else 0
+
+    def set_baseline(self, membership: np.ndarray) -> None:
+        for m in self.members:
+            r = m.evaluator(membership)
+            m.baseline_secure = r.secure.copy()
+            m.baseline_pct = r.pct
+
+    def __call__(self, membership: np.ndarray, keep_results: bool = False) -> dict:
+        pcts, fails, sec, results = [], [], [], []
+        for m in self.members:
+            r = m.evaluator(membership)
+            pcts.append(r.pct)
+            fails.append(m.evaluator.new_failures(r, m.baseline_secure) if m.baseline_secure is not None else 0)
+            sec.append(100.0 * float(np.sum(m.evaluator.weights * r.secure)))
+            if keep_results:
+                results.append(r)
+        out = dict(D=float(np.mean(pcts)), D_members=np.array(pcts), new_failures=int(np.sum(fails)),
+                   new_failures_members=np.array(fails), security_pct=float(np.mean(sec)),
+                   security_members=np.array(sec))
+        out["feasible"] = out["new_failures"] == 0
+        if keep_results:
+            out["results"] = results
+        return out
+
+
+def build_ensemble(grid, seeds, thermal_scales, runs: int = 10_000) -> EnsembleEvaluator:
+    members = []
+    for seed in seeds:
+        for ts in thermal_scales:
+            cases = up.build_cases(grid, seed=seed, thermal_scale=ts, runs=runs)
+            members.append(Member(int(seed), float(ts), cases, Evaluator(cases)))
+    return EnsembleEvaluator(members)

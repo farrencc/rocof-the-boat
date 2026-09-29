@@ -119,3 +119,26 @@ def branch_limits(grid: Grid, thermal_scale: float) -> np.ndarray:
 def exclusive_group_ids(grid: Grid) -> np.ndarray:
     """Upstream's scalar group per node, exactly as make_emulator reads it."""
     return _node_groups(grid.template, grid.template)
+
+
+LAND_BOUNDARY_GEOJSON = SIM_DIR / "ireland_land_boundary.geojson"
+
+
+def land_outlines() -> list[np.ndarray]:
+    """Ireland coastline rings (lon, lat) from upstream's geojson, for map backdrops."""
+    import json
+    if not LAND_BOUNDARY_GEOJSON.exists():
+        return []
+    gj = json.loads(LAND_BOUNDARY_GEOJSON.read_text())
+    rings = []
+
+    def add(geom):
+        t, c = geom["type"], geom["coordinates"]
+        polys = [c] if t == "Polygon" else c if t == "MultiPolygon" else []
+        for poly in polys:
+            for ring in poly:
+                rings.append(np.asarray(ring, float)[:, :2])
+
+    for f in gj.get("features", [gj]):
+        add(f.get("geometry", f))
+    return rings
