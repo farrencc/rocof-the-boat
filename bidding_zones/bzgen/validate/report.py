@@ -8,6 +8,8 @@ from __future__ import annotations
 import json
 
 import matplotlib
+import matplotlib.colors
+import matplotlib.ticker
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
@@ -22,11 +24,16 @@ FIGS = ROOT / "figures" / "validate"
 REPORTS = ROOT / "reports"
 RESULTS = ROOT / "results"
 
-# reference data-viz palette (categorical slots in fixed order; neutral for "unattributed")
-C_SPLIT, C_K1, C_3, C_4, C_NEUTRAL = "#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#9a9993"
-BUCKET_COLORS = {"internal": C_SPLIT, "border_intra": C_K1, "border_cross": C_3,
-                 "pocket": C_4, "unattributed": C_NEUTRAL}
-INK, INK2 = "#0b0b0b", "#52514e"
+from bzgen.plot.maps import (ALPHA_LABEL, BLUE, BLUE_LINE, DERATING_LABEL, GREEN, GREY, INK, INK2,  # noqa: E402
+                             SAND, SAND_LINE, TEAL)
+
+# zone-map palette; buckets in fixed order
+BUCKET_COLORS = {"internal": BLUE, "border_intra": SAND, "border_cross": GREEN,
+                 "pocket": TEAL, "unattributed": GREY}
+BUCKET_LABELS = {"internal": "Inside a zone", "border_intra": "Between DE zones",
+                 "border_cross": "DE border with neighbours", "pocket": "Load pockets",
+                 "unattributed": "No binding line"}
+DD_LABEL = "Wind + solar dispatch down (TWh/yr)"
 
 
 def _style(ax):
@@ -136,80 +143,81 @@ def aggregate(cfg, sn, out, maps, stage):
 # figures
 # --------------------------------------------------------------------------- #
 
+def _primary(df_scorings):
+    return "oos_even" if "oos_even" in set(df_scorings) else sorted(set(df_scorings))[0]
+
+
 def fig_delta(deltas, cfg):
-    sc = list(deltas.scoring.unique())
-    fig, axes = plt.subplots(1, len(sc), figsize=(5.2 * len(sc), 3.6), squeeze=False, sharey=True)
-    for ax, s in zip(axes[0], sc):
-        g = deltas[deltas.scoring == s]
-        band = g[g.role.isin(["headline", "sibling"])].groupby("derating").point.agg(["min", "max"])
-        ax.fill_between(band.index, band["min"], band["max"], color=C_SPLIT, alpha=0.18, lw=0,
-                        label="headline + siblings (range)")
-        hd = g[g.role == "headline"].sort_values("derating")
-        ax.errorbar(hd.derating, hd.point, yerr=[hd.point - hd.lo, hd.hi - hd.point], color=C_SPLIT,
-                    lw=2, marker="o", ms=5, capsize=3, label="headline map, 95% week-block CI")
-        ax.axhline(0, color=C_K1, lw=2, label="DE = 1 zone (k = 1)")
-        ax.set_title({"oos_even": "Out-of-sample (maps fit on odd weeks, scored on even)",
-                      "insample": "In-sample (appendix)"}.get(s, s), fontsize=9, color=INK)
-        ax.set_xlabel("inter-zone ATC derating", fontsize=8, color=INK2)
-        _style(ax)
-    axes[0, 0].set_ylabel("ΔDD_RES, split − k=1 (GWh/yr)", fontsize=8, color=INK2)
-    axes[0, 0].legend(fontsize=7, frameon=False, loc="best")
+    s = _primary(deltas.scoring)
+    g = deltas[deltas.scoring == s]
+    fig, ax = plt.subplots(figsize=(6.2, 4.0))
+    band = g[g.role.isin(["headline", "sibling"])].groupby("derating").point.agg(["min", "max"]) / 1e3
+    if len(g[g.role == "sibling"]):
+        ax.fill_between(band.index, band["min"], band["max"], color=BLUE, alpha=0.35, lw=0,
+                        label="Alternative maps (range)")
+    hd = g[g.role == "headline"].sort_values("derating")
+    ax.errorbar(hd.derating, hd.point / 1e3, yerr=[(hd.point - hd.lo) / 1e3, (hd.hi - hd.point) / 1e3],
+                color=BLUE_LINE, lw=2, fmt="o", ms=7, capsize=4, label="Split DE (95% range)")
+    ax.axhline(0, color=SAND_LINE, lw=2, label="DE as one zone")
+    ax.set_xlabel(DERATING_LABEL, fontsize=9, color=INK2)
+    ax.set_ylabel("Change in " + DD_LABEL[0].lower() + DD_LABEL[1:], fontsize=9, color=INK2)
+    ax.set_title("Split DE vs one zone, held-out weeks", fontsize=10, color=INK, loc="left")
+    ax.xaxis.set_major_formatter(matplotlib.ticker.PercentFormatter(1.0, decimals=0))
+    _style(ax)
+    ax.legend(fontsize=8, frameon=False, loc="upper left")
     fig.tight_layout()
     fig.savefig(FIGS / "delta_dd_vs_derating.png", dpi=150)
     plt.close(fig)
 
 
 def fig_attribution(rows, cfg):
-    sc = list(rows.scoring.unique())
-    fig, axes = plt.subplots(1, len(sc), figsize=(5.6 * len(sc), 3.8), squeeze=False, sharey=True)
-    ders = cfg["validate"]["deratings"]
-    for ax, s in zip(axes[0], sc):
-        g = rows[(rows.scoring == s) & rows.role.isin(["k1", "headline"])]
-        for j, role in enumerate(["k1", "headline"]):
-            gg = g[g.role == role].set_index("derating").reindex(ders)
-            x = np.arange(len(ders)) + (j - 0.5) * 0.38
-            bottom = np.zeros(len(ders))
-            for b in M.BUCKETS:
-                val = gg[f"attr_{b}_GWh"].fillna(0).to_numpy()
-                ax.bar(x, val, 0.34, bottom=bottom, color=BUCKET_COLORS[b], edgecolor="white", lw=1,
-                       label=b.replace("_", " ") if j == 0 else None)
-                bottom += val
-            for xi, t in zip(x, bottom):
-                ax.text(xi, t, "k=1" if role == "k1" else "split", ha="center", va="bottom",
-                        fontsize=6, color=INK2)
-        ax.set_xticks(np.arange(len(ders)), [f"{d:g}" for d in ders])
-        ax.set_xlabel("inter-zone ATC derating", fontsize=8, color=INK2)
-        ax.set_title({"oos_even": "Out-of-sample", "insample": "In-sample (appendix)"}.get(s, s),
-                     fontsize=9, color=INK)
-        _style(ax)
-    axes[0, 0].set_ylabel("DD_RES attributed (GWh/yr)", fontsize=8, color=INK2)
-    axes[0, -1].legend(fontsize=7, frameon=False, loc="upper left", bbox_to_anchor=(1.0, 1.0))
+    s = _primary(rows.scoring)
+    g = rows[(rows.scoring == s) & rows.role.isin(["k1", "headline"])]
+    ders = sorted(g.derating.unique())
+    fig, ax = plt.subplots(figsize=(6.6, 4.2))
+    for j, role in enumerate(["k1", "headline"]):
+        gg = g[g.role == role].set_index("derating").reindex(ders)
+        x = np.arange(len(ders)) + (j - 0.5) * 0.4
+        bottom = np.zeros(len(ders))
+        for b in M.BUCKETS:
+            val = gg[f"attr_{b}_GWh"].fillna(0).to_numpy() / 1e3
+            ax.bar(x, val, 0.36, bottom=bottom, color=BUCKET_COLORS[b], edgecolor="white", lw=1,
+                   label=BUCKET_LABELS[b] if j == 0 else None)
+            bottom += val
+        for xi, t in zip(x, bottom):
+            ax.text(xi, t, "One zone" if role == "k1" else "Split", ha="center", va="bottom",
+                    fontsize=7, color=INK2)
+    ax.set_xticks(np.arange(len(ders)), [f"{d:.0%}" for d in ders])
+    ax.set_xlabel(DERATING_LABEL, fontsize=9, color=INK2)
+    ax.set_ylabel(DD_LABEL, fontsize=9, color=INK2)
+    ax.set_title("Which lines cause the dispatch down", fontsize=10, color=INK, loc="left")
+    _style(ax)
+    ax.legend(fontsize=7.5, frameon=False, loc="upper left")
     fig.tight_layout()
     fig.savefig(FIGS / "attribution.png", dpi=150)
     plt.close(fig)
 
 
 def fig_duration(hourly, sn, cfg):
-    ref = cfg["validate"]["reference_derating"]
-    sc = sorted({k[0] for k in hourly}, key=lambda s: s != "oos_even")
-    fig, axes = plt.subplots(1, len(sc), figsize=(5.2 * len(sc), 3.4), squeeze=False, sharey=True)
-    for ax, s in zip(axes[0], sc):
-        head = "oos_headline" if s == "oos_even" else "is_headline"
-        for mid, col, lab in (("k1", C_K1, "DE = 1 zone"), (head, C_SPLIT, "DE split (headline)")):
-            h = hourly.get((s, mid, ref))
+    s = _primary([k[0] for k in hourly])
+    head = "oos_headline" if s == "oos_even" else "is_headline"
+    ders = sorted({k[2] for k in hourly if k[0] == s and k[1] == head})
+    fig, axes = plt.subplots(1, len(ders), figsize=(4.4 * len(ders), 3.6), squeeze=False, sharey=True)
+    for ax, der in zip(axes[0], ders):
+        for mid, col, lab in (("k1", SAND_LINE, "DE as one zone"), (head, BLUE_LINE, "Split DE")):
+            h = hourly.get((s, mid, der))
             if h is None:
                 continue
             h = h[h.stageB_ok.astype(bool)]
             o = np.argsort(-h.DD_RES.to_numpy())
             wv = sn.weight.reindex(h.index).to_numpy()[o]
-            x = np.cumsum(wv) / wv.sum()
-            ax.plot(x, h.DD_RES.to_numpy()[o] / 1e3, color=col, lw=2, label=lab)
-        ax.set_xlabel("share of hours", fontsize=8, color=INK2)
-        ax.set_title(f"{'Out-of-sample' if s == 'oos_even' else 'In-sample'}, derating {ref:g}",
-                     fontsize=9, color=INK)
+            ax.plot(np.cumsum(wv) / wv.sum(), h.DD_RES.to_numpy()[o] / 1e3, color=col, lw=2, label=lab)
+        ax.set_xlabel("Share of hours", fontsize=9, color=INK2)
+        ax.xaxis.set_major_formatter(matplotlib.ticker.PercentFormatter(1.0, decimals=0))
+        ax.set_title(f"Trading capacity {der:.0%}", fontsize=10, color=INK, loc="left")
         _style(ax)
-    axes[0, 0].set_ylabel("DD_RES in DE (GW)", fontsize=8, color=INK2)
-    axes[0, 0].legend(fontsize=7, frameon=False)
+    axes[0, 0].set_ylabel("Wind + solar dispatch down (GW)", fontsize=9, color=INK2)
+    axes[0, 0].legend(fontsize=8, frameon=False)
     fig.tight_layout()
     fig.savefig(FIGS / "dd_duration.png", dpi=150)
     plt.close(fig)
@@ -230,46 +238,60 @@ def dd_by_bus(out, mid, der, hours, w, gens, cfg):
     return (x.groupby("g").e.sum() * sc / 1e3).groupby(gens.bus).sum()
 
 
-def fig_map(out, maps, sn, cfg, buses):
+def fig_map(out, maps, sn, cfg, buses, der=None):
     from bzgen.plot import maps as pm
     import geopandas as gpd
-    ref = cfg["validate"]["reference_derating"]
+    from bzgen.validate.zonemap import iso_week
+    der = cfg["validate"]["reference_derating"] if der is None else der
     gens = pd.read_csv(ROOT / "data" / "interim" / "generators.csv", index_col=0)
     f = cfg["validate"]["focus"]
-    mem = sorted(buses[buses.cluster_country == f].country.unique())
-    shape = pm.country_shape(mem)
+    shape = pm.country_shape(sorted(buses[buses.cluster_country == f].country.unique()))
     head = "oos_headline" if "oos_headline" in maps else "is_headline"
-    from bzgen.validate.zonemap import iso_week
     even = iso_week(sn.index).iso_week.to_numpy() % 2 == 0
     hours = sn.index[even] if maps[head]["fit"] == "oos" else sn.index
     lab = maps[head]["labels"]
-    dd = {m: dd_by_bus(out, m, ref, hours, sn.weight, gens, cfg) for m in ("k1", head)}
-    vals = {m: dd[m].reindex(lab.index).fillna(0).groupby(lab).sum() for m in dd}
+    dd = {m: dd_by_bus(out, m, der, hours, sn.weight, gens, cfg) for m in ("k1", head)}
+    vals = {m: dd[m].reindex(lab.index).fillna(0).groupby(lab).sum() / 1e3 for m in dd}
     vmax = max(float(v.max()) for v in vals.values()) or 1.0
-    cmap = plt.get_cmap("Blues")
-    fig, axes = plt.subplots(1, 2, figsize=(9, 5.4))
+    cmap = matplotlib.colors.LinearSegmentedColormap.from_list("zb", ["#ffffff", BLUE, "#2e4a6b"])
+    fig, axes = plt.subplots(1, 2, figsize=(9, 5.6))
     cells = pm.zone_cells(buses, lab, shape)
-    gb = pm._proj_buses(buses.loc[lab.index])
-    for ax, m, title in ((axes[0], "k1", "DE = 1 zone"), (axes[1], head, "DE split (headline map)")):
+    for ax, m, title in ((axes[0], "k1", "DE as one zone"), (axes[1], head, "Split DE")):
         for _, r in cells.iterrows():
             val = vals[m].get(r.zone, 0.0)
-            gpd.GeoSeries([r.geometry], crs=pm.CRS).plot(ax=ax, color=cmap(0.12 + 0.8 * val / vmax),
+            gpd.GeoSeries([r.geometry], crs=pm.CRS).plot(ax=ax, color=cmap(0.15 + 0.85 * val / vmax),
                                                          edgecolor="white", lw=1.2)
-            c = r.geometry.representative_point()
-            ax.text(c.x, c.y, f"{f}-{int(r.zone)}\n{val:,.0f} GWh", ha="center", va="center",
-                    fontsize=7, color=INK)
-        s = dd[m].reindex(lab.index).fillna(0).to_numpy()
-        ax.scatter(gb.geometry.x, gb.geometry.y, s=2 + 60 * s / max(s.max(), 1e-9), facecolors="none",
-                   edgecolors=INK2, linewidths=0.4)
         gpd.GeoSeries([shape], crs=pm.CRS).plot(ax=ax, facecolor="none", edgecolor="0.3", lw=0.6)
-        ax.set_title(f"{title}: DD_RES by zone of the split map", fontsize=9, color=INK)
+        for z, val in vals[m].items():
+            big = cells[cells.zone == z].geometry.explode(index_parts=False)
+            c = big.iloc[int(np.argmax(big.area.to_numpy()))].representative_point()
+            ax.text(c.x, c.y, f"{val:.1f} TWh", ha="center", va="center", fontsize=8, color=INK,
+                    bbox=dict(boxstyle="round,pad=0.2", fc="white", ec="none", alpha=0.8))
+        ax.set_title(title, fontsize=10, color=INK, loc="left")
         ax.set_axis_off()
-    fig.suptitle(f"Where DE dispatch down lands ({'out-of-sample' if maps[head]['fit'] == 'oos' else 'in-sample'}, "
-                 f"derating {ref:g}); circles ∝ per-bus DD_RES", fontsize=9, color=INK2)
+    fig.suptitle(f"Wind + solar dispatch down per zone (trading capacity {der:.0%})", fontsize=10, color=INK)
     fig.tight_layout()
-    fig.savefig(FIGS / "dd_map_de.png", dpi=150)
+    fig.savefig(FIGS / f"dd_map_de_d{der:g}.png", dpi=150)
     plt.close(fig)
     return vals
+
+
+def fig_maps_under_test(maps, buses):
+    from bzgen.plot import maps as pm
+    lines = pd.read_csv(ROOT / "data" / "interim" / "lines.csv", index_col=0)
+    links = pd.read_csv(ROOT / "data" / "interim" / "links.csv", index_col=0)
+    mem = sorted(buses[buses.cluster_country == "DE"].country.unique())
+    names = {"is_headline": "Full year", "oos_headline": "Odd weeks (test map)"}
+    ids = [m for m in ["is_headline", "oos_headline", "oos_sib1", "oos_sib2", "oos_sib3"] if m in maps]
+    fig, axes = plt.subplots(1, len(ids), figsize=(3.3 * len(ids), 4.2), squeeze=False)
+    for ax, i in zip(axes[0], ids):
+        pm.draw_country(ax, buses, lines, links, maps[i]["labels"], mem,
+                        title=names.get(i, i.replace("oos_sib", "Odd weeks, alternative ")))
+        ax.title.set_fontsize(9)
+    fig.suptitle(f"DE bidding zones under test ({ALPHA_LABEL.lower()} = 2)", fontsize=10, color=INK)
+    fig.tight_layout()
+    fig.savefig(FIGS / "maps_under_test.png", dpi=130)
+    plt.close(fig)
 
 
 # --------------------------------------------------------------------------- #
@@ -293,7 +315,11 @@ def write(cfg, sn, out, tag, maps, zmaps, pocket, buses, real_rep, stage):
         fig_attribution(rows, cfg)
         fig_duration(hourly, sn, cfg)
         try:
-            vals = fig_map(out, maps, sn, cfg, buses)
+            for der in sorted(rows.derating.unique()):
+                vv = fig_map(out, maps, sn, cfg, buses, der)
+                if np.isclose(der, v["reference_derating"]):
+                    vals = vv
+            fig_maps_under_test(maps, buses)
         except Exception as e:           # a map figure must not hide the numbers
             vals = f"map figure failed: {e!r}"
     text = markdown(cfg, sn, tag, maps, rows, deltas, checks, bnd, nodal_meta, pocket, buses,
@@ -433,7 +459,7 @@ def markdown(cfg, sn, tag, maps, rows, deltas, checks, bnd, nodal_meta, pocket, 
         L += ["![ΔDD versus derating](../figures/validate/delta_dd_vs_derating.png)", "",
               "![attribution](../figures/validate/attribution.png)", "",
               "![duration](../figures/validate/dd_duration.png)", "",
-              "![map](../figures/validate/dd_map_de.png)", ""]
+              f"![map](../figures/validate/dd_map_de_d{v['reference_derating']:g}.png)", ""]
         if isinstance(vals, str):
             L += [f"_{vals}_", ""]
         k1 = rows[(rows["map"] == "k1") & (rows.scoring == rows.scoring.iloc[0])]

@@ -75,12 +75,12 @@ def frames(cfg, country, restart, every):
                ws.qt, ws.parent, ws.active, ws.seeds)
         if i % every == every - 1 or i == nT - 1:
             e, cs = energy(lam[i])
-            out.append((lab_series(), f"temperature step {i + 1}/{nT}", T[i], lam[i], e, cs))
+            out.append((lab_series(), f"Cooling step {i + 1} of {nT}", T[i], lam[i], e, cs))
     A._run(labels, k, g.ptr, g.idx, g.w, g.Lnode, g.Gnode, g.Ltot, a["balance_floor"], p["lambda_b"],
            lam[-1:], T[-1:], 0, int(a["quench_sweeps"] * g.n), seed + nT, ws.mark, ws.owner, ws.stamp,
            ws.Q, ws.qh, ws.qt, ws.parent, ws.active, ws.seeds)
     e, cs = energy(lam_c1)
-    out.append((lab_series(), "final quench (T = 0)", 0.0, lam_c1, e, cs))
+    out.append((lab_series(), "Final map", 0.0, lam_c1, e, cs))
     return out, buses, p, k
 
 
@@ -99,11 +99,8 @@ def main():
     for lab, what, T, lc, e, cs in fr:
         fig, ax = plt.subplots(figsize=(5.2, 6.0))
         pm.draw_country(ax, buses, lines, links, lab, mem)
-        ax.set_title(f"{args.country}: {k} bidding zones forming by simulated annealing\n{what}",
-                     fontsize=9)
-        ax.text(0.02, 0.01, f"T = {T:.3g}   λ_c = {lc:.3g}   H = {e:.1f}   extra fragments = {int(cs)}\n"
-                            f"α = {p['alpha']:g}, λ_b = {p['lambda_b']:g}; restart {args.restart}",
-                transform=ax.transAxes, fontsize=7, va="bottom", color="0.25")
+        ax.set_title(f"{args.country}: {k} bidding zones forming ({pm.ALPHA_LABEL.lower()} = {p['alpha']:g})\n{what}",
+                     fontsize=9, loc="left")
         fig.tight_layout()
         buf = io.BytesIO()
         fig.savefig(buf, format="png", dpi=100)

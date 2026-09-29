@@ -394,9 +394,9 @@ def main():
     zmaps = {mid: zonemap.zone_map(buses, m["labels"], cfg, real=real) for mid, m in maps.items()}
     if args.check:
         crosscheck(cfg, sn, zmaps, out)
+    scorings = args.scoring or list(v["scoring"])
+    v["scoring"] = scorings
     if not args.report_only:
-        scorings = args.scoring or list(v["scoring"])
-        v["scoring"] = scorings
         for r in plan_runs(cfg, maps, sn, scorings):
             run_one(cfg, sn, out, r["map"], zmaps[r["map"]], r["derating"], r["hours"], pocket,
                     focus_bus, args.stage, workers)

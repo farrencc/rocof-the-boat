@@ -27,6 +27,23 @@ PALETTE = ["#4e79a7", "#f28e2b", "#59a14f", "#e15759", "#76b7b2", "#edc948", "#b
 CRS = 3035   # ETRS89-LAEA, equal area, for drawing
 
 
+def tint(hex_color: str, a: float) -> str:
+    """Colour as drawn at opacity ``a`` on white (how the zone maps render PALETTE)."""
+    import matplotlib.colors as mc
+    rgb = np.array(mc.to_rgb(hex_color))
+    return mc.to_hex(a * rgb + (1 - a))
+
+
+# chart colours matching the zone maps: fills at map opacity, lines a little stronger
+MAP_ALPHA = 0.65
+BLUE, SAND, GREEN, TEAL = (tint(c, MAP_ALPHA) for c in ("#4e79a7", "#f28e2b", "#59a14f", "#76b7b2"))
+BLUE_LINE, SAND_LINE, GREEN_LINE = (tint(c, a) for c, a in zip( ("#4e79a7", "#f28e2b", "#59a14f"), (0.9, 0.75, 0.9)))
+GREY = "#bab0ac"
+INK, INK2 = "#0b0b0b", "#52514e"
+ALPHA_LABEL = "Connectivity coupling α"
+DERATING_LABEL = "Zone trading capacity (share of line capacity)"
+
+
 @functools.lru_cache(maxsize=1)
 def outlines() -> gpd.GeoDataFrame:
     """Country outlines for drawing: GISCO NUTS 2024 level 0 at 1:10M (display only)."""

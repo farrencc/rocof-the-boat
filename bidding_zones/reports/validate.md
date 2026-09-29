@@ -35,10 +35,14 @@ Negative ΔDD means less dispatch down with DE split.
 
 ## Maps under test
 
-| map          | role     | fit   |   energy | restart   |
-|:-------------|:---------|:------|---------:|:----------|
-| k1           | k1       | none  |  nan     |           |
-| oos_headline | headline | oos   | -757.904 | 4         |
+| map          | role     | fit      |   energy | restart   |
+|:-------------|:---------|:---------|---------:|:----------|
+| k1           | k1       | none     |  nan     |           |
+| is_headline  | headline | insample | -759.226 |           |
+| oos_headline | headline | oos      | -757.904 | 4         |
+| oos_sib1     | sibling  | oos      | -757.544 | 2         |
+| oos_sib2     | sibling  | oos      | -755.918 | 5         |
+| oos_sib3     | sibling  | oos      | -755.203 | 6         |
 
 ARI between the out-of-sample headline and the in-sample headline: 0.27.
 
@@ -101,12 +105,14 @@ All of `results/validate.csv`, abridged (GWh/yr, M€/yr; shed energy is reporte
 
 ![duration](../figures/validate/dd_duration.png)
 
-![map](../figures/validate/dd_map_de.png)
+![map](../figures/validate/dd_map_de_d0.7.png)
 
 ### k = 1 redispatch volume versus BNetzA
 
-| derating   | redispatch_up_focus_GWh   | redispatch_down_focus_GWh   | DD_RES_GWh   | up_plus_down_TWh   |
-|------------|---------------------------|-----------------------------|--------------|--------------------|
+|   derating |   redispatch_up_focus_GWh |   redispatch_down_focus_GWh |   DD_RES_GWh |   up_plus_down_TWh |
+|-----------:|--------------------------:|----------------------------:|-------------:|-------------------:|
+|        0.2 |                   43260.2 |                     43259.6 |      20089.5 |               86.5 |
+|        0.7 |                  114989   |                    115229   |      44365.4 |              230.2 |
 
 Reference: 20–30 TWh/yr (unsourced, from the brief). Nothing is tuned to match it. A large gap is expected from the 220 kV truncation (no 110 kV grid, load pockets) and from the idealised market (one perfect ATC auction, perfect redispatch).
 

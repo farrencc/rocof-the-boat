@@ -20,6 +20,7 @@ import re
 import textwrap
 
 import matplotlib
+import matplotlib.colors
 import matplotlib.patches
 import matplotlib.ticker
 matplotlib.use("Agg")
@@ -64,23 +65,26 @@ def collect(tag: str) -> pd.DataFrame:
 
 
 def heatmap(df: pd.DataFrame, fn, tag: str) -> None:
+    from bzgen.plot.maps import ALPHA_LABEL, BLUE, DERATING_LABEL, INK, INK2, SAND
     piv = df.pivot(index="alpha", columns="derating", values="dDD_RES_GWh") / 1e3
     lim = float(np.nanmax(np.abs(piv.to_numpy()))) or 1.0
+    cmap = matplotlib.colors.LinearSegmentedColormap.from_list(
+        "zb_div", ["#2e4a6b", BLUE, "#ffffff", SAND, "#a0571c"])
     fig, ax = plt.subplots(figsize=(6.2, 4.2))
-    im = ax.imshow(piv.to_numpy(), cmap="RdBu_r", vmin=-lim, vmax=lim, aspect="auto")
-    ax.set_xticks(range(len(piv.columns)), [f"{c:g}" for c in piv.columns])
+    im = ax.imshow(piv.to_numpy(), cmap=cmap, vmin=-lim, vmax=lim, aspect="auto")
+    ax.set_xticks(range(len(piv.columns)), [f"{c:.0%}" for c in piv.columns])
     ax.set_yticks(range(len(piv.index)), [f"{a:g}" for a in piv.index])
     for i in range(piv.shape[0]):
         for j in range(piv.shape[1]):
             v = piv.iat[i, j]
             if np.isfinite(v):
-                ax.text(j, i, f"{v:+.1f}", ha="center", va="center", fontsize=8,
-                        color="white" if abs(v) > 0.6 * lim else "#0b0b0b")
-    ax.set_xlabel("inter-zone ATC derating", fontsize=8)
-    ax.set_ylabel("coupling α (sweep map)", fontsize=8)
-    ax.set_title(f"ΔDD_RES, DE split − DE = 1 zone (TWh/yr; blue = split reduces DD)\n"
-                 f"EXPLORATORY: in-sample maps, {tag} representative hours", fontsize=8)
-    fig.colorbar(im, ax=ax, label="TWh/yr")
+                ax.text(j, i, f"{v:+.1f}", ha="center", va="center", fontsize=9,
+                        color="white" if abs(v) > 0.6 * lim else INK)
+    ax.set_xlabel(DERATING_LABEL, fontsize=9, color=INK2)
+    ax.set_ylabel(ALPHA_LABEL, fontsize=9, color=INK2)
+    ax.set_title("Change in dispatch down, split DE vs one zone (blue = less)", fontsize=10,
+                 color=INK, loc="left")
+    fig.colorbar(im, ax=ax, label="Wind + solar dispatch down (TWh/yr)")
     fig.tight_layout()
     fig.savefig(fn, dpi=150)
     plt.close(fig)
@@ -103,9 +107,9 @@ if __name__ == "__main__":
     main()
 
 
-def derating_panel(df: pd.DataFrame, der: float, tag: str) -> pd.DataFrame:
-    """Figure + table at one derating: dDD by alpha (scan) and its two components, with the
-    out-of-sample point for the headline alpha (results/validate.csv) where it exists."""
+def derating_panel(df: pd.DataFrame, der: float, tag: str):
+    """Table at one derating (results/validate/scan_<tag>_d<der>.csv), and the out-of-sample
+    point for the headline alpha from results/validate.csv where it exists."""
     d = df[np.isclose(df.derating, der)].sort_values("alpha").copy()
     d["dDD_pct"] = 100 * d.dDD_RES_GWh / d.DD_k1_GWh
     oos = None
@@ -118,52 +122,6 @@ def derating_panel(df: pd.DataFrame, der: float, tag: str) -> pd.DataFrame:
             p = json.loads((ROOT / "results" / "configs" / cfg["sweep"]["headline"] / "done.json")
                            .read_text())["params"]
             oos = dict(alpha=p["alpha"], **r.iloc[0][["dDD_RES_GWh", "dDD_RES_lo", "dDD_RES_hi"]].to_dict())
-    x = np.arange(len(d))
-    lab = [f"{a:g}" for a in d.alpha]
-    fig, axes = plt.subplots(1, 2, figsize=(10.5, 4.6))
-    ax = axes[0]
-    ax.bar(x, d.dDD_RES_GWh / 1e3, 0.6, color="#2a78d6", edgecolor="white",
-           label="scan: in-sample map, 200 representative hours")
-    for xi, v, pc in zip(x, d.dDD_RES_GWh / 1e3, d.dDD_pct):
-        ax.text(xi, v + (0.05 if v >= 0 else -0.05), f"{v:+.2f}\n({pc:+.0f}%)", ha="center",
-                va="bottom" if v >= 0 else "top", fontsize=7, color="#0b0b0b")
-    if oos is not None and oos["alpha"] in list(d.alpha):
-        i = list(d.alpha).index(oos["alpha"])
-        ax.errorbar(i + 0.38, oos["dDD_RES_GWh"] / 1e3,
-                    yerr=[[(oos["dDD_RES_GWh"] - oos["dDD_RES_lo"]) / 1e3],
-                          [(oos["dDD_RES_hi"] - oos["dDD_RES_GWh"]) / 1e3]],
-                    fmt="o", color="#eb6834", ms=6, capsize=3, lw=2,
-                    label="out-of-sample check (refit map, held-out weeks, 95% CI)")
-    ax.axhline(0, color="#52514e", lw=1)
-    ax.set_xticks(x, lab)
-    ax.set_xlabel("coupling α", fontsize=8)
-    ax.set_ylabel("ΔDD_RES, DE split − DE = 1 zone (TWh/yr)", fontsize=8)
-    ax.set_title(f"Dispatch-down change at derating {der:g} (below 0 = split reduces DD)", fontsize=9)
-    lo, hi = ax.get_ylim()
-    ax.set_ylim(lo - 0.25 * (hi - lo), hi + 0.1 * (hi - lo))
-    ax.legend(fontsize=7, frameon=False, loc="upper center", bbox_to_anchor=(0.5, -0.16), ncol=1)
-    ax = axes[1]
-    sp, rd = d.dSpill_market_GWh.to_numpy() / 1e3, d.dRedispatch_down_res_GWh.to_numpy() / 1e3
-    ax.bar(x, sp, 0.6, color="#eb6834", edgecolor="white", label="market curtailment")
-    ax.bar(x, rd, 0.6, color="#1baf7a", edgecolor="white", label="redispatch down")
-    ax.plot(x, sp + rd, "o", color="#0b0b0b", ms=5, label="net ΔDD")
-    ax.axhline(0, color="#52514e", lw=1)
-    ax.set_xticks(x, lab)
-    ax.set_xlabel("coupling α", fontsize=8)
-    ax.set_ylabel("change vs DE = 1 zone (TWh/yr)", fontsize=8)
-    ax.set_title("Where the change comes from", fontsize=9)
-    ax.legend(fontsize=7, frameon=False, loc="upper center", bbox_to_anchor=(0.5, -0.16), ncol=3)
-    for a in axes:
-        for s in ("top", "right"):
-            a.spines[s].set_visible(False)
-        a.grid(axis="y", color="#e6e5e0", lw=0.6)
-        a.set_axisbelow(True)
-        a.tick_params(labelsize=8)
-    fig.suptitle(f"EXPLORATORY scan ({tag}); the out-of-sample check is the test", fontsize=8,
-                 color="#52514e")
-    fig.tight_layout()
-    fig.savefig(ROOT / "figures" / "validate" / f"scan_{tag}_d{der:g}.png", dpi=150)
-    plt.close(fig)
     t = d[["alpha", "DD_k1_GWh", "DD_split_GWh", "dDD_RES_GWh", "dDD_pct", "dSpill_market_GWh",
            "dRedispatch_down_res_GWh", "dDD_RES_TH_GWh", "dNP_slack_focus_GWh", "dCost_total_EUR"]]
     t.to_csv(ROOT / "results" / "validate" / f"scan_{tag}_d{der:g}.csv", index=False)
@@ -180,16 +138,7 @@ def _clean(ax):
     ax.tick_params(labelsize=9, colors="#52514e")
 
 
-def _tint(hex_color: str, a: float) -> str:
-    """Colour as drawn at opacity ``a`` on white (how the zone maps render bzgen.plot.maps.PALETTE)."""
-    rgb = np.array(matplotlib.colors.to_rgb(hex_color))
-    return matplotlib.colors.to_hex(a * rgb + (1 - a) * 1.0)
-
-
-# the EU-wide zone maps' palette (bzgen.plot.maps.PALETTE at map opacity): blue, sandy, green
-_A = 0.65
-BLUE, SAND, GREEN = (_tint(c, _A) for c in ("#4e79a7", "#f28e2b", "#59a14f"))
-XLABEL = "Connectivity coupling α"
+from bzgen.plot.maps import BLUE, GREEN, SAND, BLUE_LINE, SAND_LINE, ALPHA_LABEL as XLABEL, tint as _tint  # noqa: E402
 
 
 def readable_panels(df: pd.DataFrame, der: float, tag: str) -> list:
@@ -212,7 +161,7 @@ def readable_panels(df: pd.DataFrame, der: float, tag: str) -> list:
     ax.set_xticks(x, lab)
     ax.set_xlabel(XLABEL, fontsize=9, color="#52514e")
     ax.set_ylabel("Change in wind + solar dispatch down (TWh/yr)", fontsize=9, color="#52514e")
-    ax.set_title("Split DE vs one zone (below 0 = less dispatch down)", fontsize=10,
+    ax.set_title(f"Split DE vs one zone, trading capacity {der:.0%} (below 0 = less)", fontsize=10,
                  color="#0b0b0b", loc="left")
     _clean(ax)
     fig.tight_layout()
@@ -231,7 +180,7 @@ def readable_panels(df: pd.DataFrame, der: float, tag: str) -> list:
     ax.set_xticks(x, lab)
     ax.set_xlabel(XLABEL, fontsize=9, color="#52514e")
     ax.set_ylabel("Change in wind + solar dispatch down (TWh/yr)", fontsize=9, color="#52514e")
-    ax.set_title("Where the change comes from", fontsize=10, color="#0b0b0b", loc="left")
+    ax.set_title(f"Where the change comes from, trading capacity {der:.0%}", fontsize=10, color="#0b0b0b", loc="left")
     _clean(ax)
     ax.legend(fontsize=8, frameon=False, loc="lower left")
     fig.tight_layout()
