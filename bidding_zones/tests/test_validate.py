@@ -228,3 +228,22 @@ def test_planted_border_congestion_is_border_attributed(cfg):
     # the same congestion is internal when DE is one zone
     kk = res["k1"]
     assert kk.DD_RES > 100 and kk.attr_internal / kk.DD_RES > 0.95
+
+
+def test_week_block_bootstrap_and_pairing(cfg):
+    from bzgen.validate import inference as I
+    idx = pd.date_range("2019-01-07", periods=24 * 7 * 6, freq="h")
+    rng = np.random.default_rng(1)
+    base = rng.uniform(0, 100, len(idx))
+    hk = pd.DataFrame({"DD_RES": base, "stageB_ok": True}, index=idx)
+    hs = pd.DataFrame({"DD_RES": base - 10.0, "stageB_ok": True}, index=idx)
+    hs.iloc[5, hs.columns.get_loc("stageB_ok")] = False      # infeasible under one map: dropped
+    w = pd.Series(1.0, index=idx)
+    p = I.paired(hs, hk, "DD_RES", w)
+    assert len(p) == len(idx) - 1 and p.block.nunique() == 6
+    b = I.block_bootstrap(p, cfg)
+    assert b["point"] == pytest.approx(-10.0 * 8760 / 1e3)
+    assert b["lo"] == pytest.approx(b["point"]) and b["hi"] == pytest.approx(b["point"])
+    hs["DD_RES"] = base - 10.0 + rng.normal(0, 30, len(idx))
+    b = I.block_bootstrap(I.paired(hs, hk, "DD_RES", w), cfg)
+    assert b["lo"] < b["point"] < b["hi"]
